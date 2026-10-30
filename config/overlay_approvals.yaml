@@ -1,0 +1,10 @@
+# Explicit approvals of audit-overlay proposals (ARCHITECTURE §7; applied from P1.3).
+# A PROPOSED_* overlay row changes nothing unless its overlay_id is listed here.
+#
+# Schema (each entry):
+#   - overlay_id: OV-002        # must exist in the overlay, otherwise the build fails
+#     approved_by: <name>
+#     approved_on: YYYY-MM-DD
+#     note: <free text>
+
+approved: []

@@ -1,0 +1,8 @@
+# Module A (labour-market) feasibility gate record. See ARCHITECTURE §21 and TASKS Phase 2.
+# gate_decision: GO | GO_REDUCED | NO_GO | NOT_ASSESSED
+# Until P2.5 records a decision, the module is not assessed and no labour-market
+# statistic may appear anywhere.
+
+gate_decision: NOT_ASSESSED
+decided_on: null
+criteria: []
