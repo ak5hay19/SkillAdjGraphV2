@@ -1,0 +1,5 @@
+synthetic: true
+links:
+  - from: TEST/Q9001
+    to: TEST/Q9002
+    note: fictional progression used only in tests

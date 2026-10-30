@@ -1,6 +1,6 @@
 # Skill Adjacency Graph — Implementation Plan (TASKS)
 
-**Document status:** Approved baseline, 2026-10-31. Phase 0 is partly done: P0.1, P0.2 and P0.5 are DONE, with evidence below. **No application code exists yet.** The first implementation task is **P0.3** (§3).
+**Document status:** Approved baseline, 2026-10-31. Phase 0 is complete once the P0.4 commit lands: P0.1–P0.5 are DONE, with evidence below (P0.1 `fbdc28f`, P0.3 `63a83dd`; P0.4 verified and awaiting commit). The foundation package exists (settings, logging, CLI stubs) with **no business logic**. The next task is **P1.1** (§3).
 **Authority:** this document is authoritative for task order, status and acceptance criteria. The other documents:
 
 - design: [`ARCHITECTURE.md`](ARCHITECTURE.md);
@@ -51,7 +51,7 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
 
 | Phase | Rough effort | Exit checkpoint |
 |---|---|---|
-| 0 Foundation | ≈0.5 day remaining (P0.3, P0.4) | P0.4 |
+| 0 Foundation | Done (P0.4 awaiting commit) | P0.4 |
 | 1 Evidence & curated build | 1.5–3 days | P1.6 |
 | 2 Module A feasibility | 1–2 days + access wait | P2.5 (always) |
 | 3 Engine | 2.5–4 days | P3.10 |
@@ -67,13 +67,13 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
 
 | Checkpoint | Priority | Status |
 |---|---|---|
-| P0.1 Repository hygiene | MUST | **DONE**: staged; the commit waits for your instruction |
+| P0.1 Repository hygiene | MUST | **DONE**: committed in `fbdc28f` |
 | P0.2 Dependency specification, lock and `.venv` | MUST | **DONE** |
-| P0.3 Package skeleton, configuration and logging | MUST | TODO: **first implementation task** |
-| P0.4 Test infrastructure | MUST | TODO |
+| P0.3 Package skeleton, configuration and logging | MUST | **DONE**: committed in `63a83dd` |
+| P0.4 Test infrastructure | MUST | **DONE**: verified; the commit waits for your instruction |
 | P0.5 Legacy test baseline check | MUST | **DONE** |
 
-### P0.1 — Repository hygiene · MUST · DONE (staged, not committed)
+### P0.1 — Repository hygiene · MUST · DONE (`fbdc28f`)
 
 - **Objective:** make the research code versionable without exposing data (ARCHITECTURE RS-1/RS-2/RS-3).
 - **Done (2026-10-31):**
@@ -94,7 +94,7 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
   - `git check-ignore` exits 1 for the three legacy files and for `frontend/index.html`.
   - `.gitignore` contains no `@'` or `Set-Content` line.
   - The staged set contains nothing under `data/` or `.venv/`, and no `.pdf`, `.csv` or `.html` file.
-- **Remaining:** commit on your instruction, e.g. `git commit -m "chore: repository foundation (gitignore, pinned env, legacy baseline, planning docs)"`. Nothing is pushed.
+- **Committed:** `fbdc28f chore: establish project foundation` (together with the P0.2 and P0.5 files). Nothing is pushed.
 
 ### P0.2 — Dependency specification, lock and `.venv` · MUST · DONE
 
@@ -117,7 +117,7 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
 - **Deliberately not done here:** installing the project itself. `src/skillgraph/` is created in P0.3, so `import skillgraph` is a P0.3 criterion. This resolves the earlier ordering conflict.
 - **Re-verification:** README § Setup and § Verify.
 
-### P0.3 — Package skeleton, configuration and logging · MUST · TODO (first implementation task)
+### P0.3 — Package skeleton, configuration and logging · MUST · DONE (`63a83dd`)
 
 - **Objective:** the empty, correctly layered package from ARCHITECTURE §6.2, installed into `.venv`, with configuration and logging behaviour defined.
 - **Prerequisites:** P0.2 (DONE). Committing P0.1 first is recommended, but it is not technically required.
@@ -146,8 +146,9 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
   - No business logic exists yet: no curation, eligibility or graph code.
 - **Verification:** `python -m pytest tests/unit/test_settings.py tests/unit/test_logging.py`.
 - **Effort:** 2–4 h.
+- **Status (verified 2026-10-31):** committed as `63a83dd feat: add application foundation and configuration`. `import skillgraph` prints `0.1.0`; `python -m skillgraph --help` lists the six commands; each stub exits 2 naming its checkpoint (P1.1, P1.4, P1.6, P4.6, P5.1, P6.3); the settings, logging and CLI unit tests pass.
 
-### P0.4 — Test infrastructure · MUST · TODO
+### P0.4 — Test infrastructure · MUST · DONE (verified; commit pending)
 
 - **Objective:** test conventions that keep restricted data out of Git, make data-dependent tests skip cleanly, and bring the legacy baseline check into the normal suite **without** presenting the legacy suite as passing.
 - **Prerequisites:** P0.3.
@@ -166,6 +167,13 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
   - No `.pytest_cache` is created.
 - **Verification:** `python -m pytest -q`; `python -m pytest -q -m requires_local_data`.
 - **Effort:** 1–2 h.
+- **Status (verified 2026-10-31):**
+  - `python -m pytest -q`: 52 passed; with `-m "not requires_local_data"`: 50 passed, 2 deselected.
+  - With `SKILLGRAPH_DATA_ROOT` pointing to an empty directory: 50 passed, 2 skipped.
+  - No `.pytest_cache` is created.
+  - The `repo_data` fixture's missing-`data/` skip is a plain directory check; it was not exercised by removing real data.
+  - The baseline test passing means the documented 23 passed / 1 failed result matched (DQ-01 unresolved). It is not a passing legacy suite.
+  - The commit is pending your instruction.
 
 ### P0.5 — Legacy test baseline check · MUST · DONE
 
@@ -186,7 +194,7 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
 
 **Phase 0 definition of done:**
 
-- P0.1–P0.5 are complete, and P0.1 is committed.
+- P0.1–P0.5 are complete, and P0.1 is committed. *(Verified 2026-10-31: P0.1/P0.2/P0.5 in `fbdc28f`, P0.3 in `63a83dd`; P0.4 pending commit.)*
 - `python -m pip check` is clean.
 - `python -m pytest` passes.
 - The legacy baseline check reports MATCH: 23 passed, 1 failed, DQ-01 unresolved.
@@ -795,6 +803,8 @@ All outputs go to `data/outputs/<build_id>/`, which is local and ignored: they d
 ---
 
 ## 3. First implementation task
+
+> **Update 2026-10-31:** P0.3 is done (`63a83dd`) and P0.4 is verified. The next task is **P1.1** (source integrity verifier). The text below is the original P0.3 hand-off, kept for the record.
 
 **P0.3 — Package skeleton, configuration and logging.** The full specification and acceptance criteria are in P0.3 above.
 

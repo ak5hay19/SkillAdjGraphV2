@@ -2,7 +2,7 @@
 
 **Project:** Skill Adjacency Graph — *The shortest feasible path from a declining job*
 **Competition:** Skillathon 2026 (≈70% data analysis, ≈30% technology/integration)
-**Document status:** Approved baseline, 2026-10-31. Updated by the repository-foundation pass. Done: repository hygiene, the pinned `.venv` and the legacy test baseline (`TASKS.md` Phase 0 status). **No application code is implemented yet.** §8 lists what exists.
+**Document status:** Approved baseline, 2026-10-31. Updated by the repository-foundation pass. Done: repository hygiene, the pinned `.venv`, the legacy test baseline, the package foundation (settings, logging, CLI stubs) and test infrastructure (`TASKS.md` Phase 0 status). **No business logic is implemented yet.** §8 lists what exists.
 **Authority:** this document is authoritative for design, data issues (§8.6) and decisions (§20.2). `API_SPEC.md` is authoritative for the HTTP contract. `TASKS.md` is authoritative for task order, status and acceptance criteria. `README.md` is authoritative for setup commands.
 **Companion documents:** [`API_SPEC.md`](API_SPEC.md) (interface contract) · [`TASKS.md`](TASKS.md) (phased implementation plan)
 
@@ -226,7 +226,7 @@ Principles:
 
 | Item | Observed state |
 |---|---|
-| Branch / HEAD | Working branch `chore/repo-foundation`, created from `main` at `3362d87` (the single commit, which tracks only `.gitignore`). The foundation files are **staged, not committed**: `TASKS.md` P0.1. The remote `origin` is private. |
+| Branch / HEAD | Working branch `chore/repo-foundation`, created from `main` at `3362d87` (the single commit, which tracks only `.gitignore`). The foundation files are committed (`fbdc28f`, `63a83dd`; P0.4 pending): `TASKS.md` Phase 0. The remote `origin` is private. |
 | Ignored | `data/` (all raw and processed data); `.venv/`; caches. The legacy code directories are no longer ignored (RS-2). |
 | Python | The global interpreter is Python 3.12.5. It is used only to create `.venv`. The **global package set is inconsistent** (`pip check`: fastapi 0.115.6 requires starlette < 0.42, but 0.46.2 is installed) and is **not used** by the project (RS-7). The project runs in an isolated `.venv` installed from the hashed `requirements-lock.txt` (§15; commands in `README.md`). |
 | Other tools | Node 23.0.0 / npm 10.9.0 (frontend, P5.7); Docker 29.9.2 (COULD); uv 0.11.32, a standalone binary used only to regenerate the lock file |
@@ -237,7 +237,7 @@ Principles:
 | # | Discrepancy found by inspection | Resolution (foundation pass, 2026-10-31) |
 |---|---|---|
 | RS-1 | `.gitignore` began with `@'` and ended with `'@ \| Set-Content -Path ".gitignore" -Encoding utf8`. This was PowerShell wrapper text saved into the file. | **Resolved.** Both lines were removed (P0.1). |
-| RS-2 | `/data_*/` ignored `data_acquisition/` and `data_extraction/`, so the acquisition script, extraction script and reconciliation test had no Git history. | **Resolved.** The rule was removed, `/data/` still ignores all data, and the three legacy files are staged. They stay where they are, because their scripts compute `ROOT` from their own location. |
+| RS-2 | `/data_*/` ignored `data_acquisition/` and `data_extraction/`, so the acquisition script, extraction script and reconciliation test had no Git history. | **Resolved.** The rule was removed, `/data/` still ignores all data, and the three legacy files are committed (`fbdc28f`). They stay where they are, because their scripts compute `ROOT` from their own location. |
 | RS-3 | `*.html` would ignore the future Vite entry point `frontend/index.html`. | **Resolved.** `!/frontend/index.html` was added. The file does not exist yet; it is created in P5.7. |
 | RS-4 | `*.csv` is ignored globally. | **Kept by design.** Synthetic test fixtures use JSON/YAML (§18). |
 | RS-5 | `ACQUISITION_REPORT.md` says "Not a Git repository". | Historical: Git was initialized after acquisition. No action. |
@@ -247,7 +247,7 @@ Principles:
 
 ### 8.3 Artifact inventory and reuse decision
 
-All paths are relative to the repository root. Every **data** item below is **ignored by Git and local-only**. The three legacy code files are versioned as of the foundation pass: staged, with the content reviewed under §19.
+All paths are relative to the repository root. Every **data** item below is **ignored by Git and local-only**. The three legacy code files are versioned as of the foundation pass (`fbdc28f`), with the content reviewed under §19.
 
 | Artifact | What it is | Reuse decision |
 |---|---|---|
@@ -715,7 +715,7 @@ Docker is a convenience for the demo machine only. An image must **not** bundle 
 
 | ID | Question | Status | Effective behaviour | Affects |
 |---|---|---|---|---|
-| Q-1 | Fix `.gitignore` and version the legacy scripts (RS-1/RS-2)? | **Resolved** 2026-10-31 | Applied and staged on `chore/repo-foundation`. **The commit waits for your instruction.** | P0.1 |
+| Q-1 | Fix `.gitignore` and version the legacy scripts (RS-1/RS-2)? | **Resolved** 2026-10-31 | Applied and committed on `chore/repo-foundation` (`fbdc28f`). | P0.1 |
 | Q-2 | Approve or reject OV-002…004 (SSMO merged-cell experience) and OV-034/035 (credit groups)? | Open | Not applied. The affected values are `UNKNOWN` (`OVERLAY_NOT_APPROVED`) or display-only. | P1.3 |
 | Q-3 | "Xth or Equivalent" / "UG Diploma or equivalent": is a declared *lower* school grade with no post-school credential `NOT_MET` instead of `UNKNOWN`? | Open | `UNKNOWN` (`EQUIVALENCE_UNDEFINED`) | P1.5, P3.2 |
 | Q-4 | Model "Ability to read and write", "pursuing schooling", NTC/NAC/CITS and diploma-year routes as declared inputs (audit open item 5)? | Open | `UNKNOWN` (unmodelled) | P1.5 |
@@ -786,7 +786,7 @@ flowchart LR
 
 | Phase | Outcome | Rough effort |
 |---|---|---|
-| 0 | **Done:** `.gitignore` fixed, foundation files staged, `.venv` from the hashed lock, legacy test baseline check. **Remaining:** package skeleton, config, logging (P0.3, the first implementation task); test harness (P0.4). | ≈0.5 day remaining |
+| 0 | **Done:** `.gitignore` fixed, foundation files committed, `.venv` from the hashed lock, legacy test baseline check, package skeleton/config/logging (P0.3), test harness (P0.4, commit pending). | Done |
 | 1 | Integrity verification, schemas, curated build with evidence and conflicts, validation report | 1.5–3 days |
 | 2 | Module A gate decision (parallel; may end in `NO_GO`) | 1–2 days + access wait |
 | 3 | Eligibility engine, graph, paths, ranking, explanations, golden tests | 2.5–4 days |

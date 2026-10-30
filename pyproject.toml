@@ -33,3 +33,11 @@ analysis = [
 # installed (editable, --no-deps) only from that task onwards.
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+markers = [
+    "requires_local_data: needs the restricted local data tree (skipped when absent)",
+    "slow: long-running test",
+]
