@@ -226,7 +226,7 @@ Principles:
 
 | Item | Observed state |
 |---|---|
-| Branch / HEAD | Working branch `chore/repo-foundation`, created from `main` at `3362d87` (the single commit, which tracks only `.gitignore`). The foundation files are committed (`fbdc28f`, `63a83dd`; P0.4 pending): `TASKS.md` Phase 0. The remote `origin` is private. |
+| Branch / HEAD | Working branch `chore/repo-foundation`, created from `main` at `3362d87` (the single commit, which tracks only `.gitignore`). The foundation files are committed (`fbdc28f`, `63a83dd`, `33ac1cc`): `TASKS.md` Phase 0. The remote `origin` is private. |
 | Ignored | `data/` (all raw and processed data); `.venv/`; caches. The legacy code directories are no longer ignored (RS-2). |
 | Python | The global interpreter is Python 3.12.5. It is used only to create `.venv`. The **global package set is inconsistent** (`pip check`: fastapi 0.115.6 requires starlette < 0.42, but 0.46.2 is installed) and is **not used** by the project (RS-7). The project runs in an isolated `.venv` installed from the hashed `requirements-lock.txt` (§15; commands in `README.md`). |
 | Other tools | Node 23.0.0 / npm 10.9.0 (frontend, P5.7); Docker 29.9.2 (COULD); uv 0.11.32, a standalone binary used only to regenerate the lock file |
@@ -786,7 +786,7 @@ flowchart LR
 
 | Phase | Outcome | Rough effort |
 |---|---|---|
-| 0 | **Done:** `.gitignore` fixed, foundation files committed, `.venv` from the hashed lock, legacy test baseline check, package skeleton/config/logging (P0.3), test harness (P0.4, commit pending). | Done |
+| 0 | **Done:** `.gitignore` fixed, foundation files committed, `.venv` from the hashed lock, legacy test baseline check, package skeleton/config/logging (P0.3), test harness (P0.4, `33ac1cc`). | Done |
 | 1 | Integrity verification, schemas, curated build with evidence and conflicts, validation report | 1.5–3 days |
 | 2 | Module A gate decision (parallel; may end in `NO_GO`) | 1–2 days + access wait |
 | 3 | Eligibility engine, graph, paths, ranking, explanations, golden tests | 2.5–4 days |
