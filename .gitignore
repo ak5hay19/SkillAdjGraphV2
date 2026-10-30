@@ -1,0 +1,68 @@
+@'
+# Acquired source data and generated datasets
+/data/
+/data_*/
+
+# Source documents and downloaded web pages, wherever they appear
+*.pdf
+*.html
+*.htm
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# Structured data and local exports
+*.csv
+*.tsv
+*.parquet
+*.sqlite
+*.sqlite3
+*.db
+*.jsonl
+*.ndjson
+*.pkl
+*.pickle
+*.feather
+*.arrow
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# JavaScript and frontend build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Logs, temporary files and editor settings
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
+'@ | Set-Content -Path ".gitignore" -Encoding utf8
