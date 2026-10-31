@@ -259,6 +259,14 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   - Approving an ID that does not exist fails the build.
   - The extraction CSVs and the overlay CSV are byte-identical before and after a build. A test checks their hashes.
 - **Effort:** 2–3 h.
+- **Status (2026-10-31):** mechanism implemented, **uncommitted, awaiting review**. It is **not marked DONE**: the criteria are phrased in terms of "the build" and "the curated row", and `build` does not exist until P1.4. What is verified:
+  - `src/skillgraph/curation/overlay.py`: `load_overlay`, `load_approvals`, `classify`, `load_plan`, `resolve_field`. Read-only; no CLI command is added.
+  - Empty approvals file: OV-002…004 and OV-034/035 are `PENDING`, `resolve_field` returns the extraction value unchanged with flag `OVERLAY_PENDING_APPROVAL` (real data, `tests/integration/test_overlay_real.py`).
+  - OV-002 approved (in memory in the test; `config/overlay_approvals.yaml` stays `approved: []`): `resolve_field` returns `value = "No Experience required"`, `value_status = CORRECTION_APPLIED`, `overlay_ids = ("OV-002",)`, and `source_value = ""` is kept. This is the field-level behaviour only; the curated SSMO row itself is assembled by P1.4.
+  - An approval naming a missing overlay_id raises `OverlayError`. **P1.4 must call `load_plan` and let that error fail the build.**
+  - The extraction and overlay CSVs have identical SHA-256 before and after loading, classifying and resolving. A test checks this. The same check **after a build** belongs to P1.4.
+  - Decisions beyond the text (the specification does not say): an approval of a row that is not `PROPOSED_*` is an error; an unknown `status` or `engine_use` is an error; a missing or non-list approvals file is an error rather than "nothing approved"; an overlay `source_value` that differs from the extraction value is a "stale overlay" error; an approved `PROPOSED_REPRESENTATION` (OV-034/035) is classified `APPLY` but replaces no value. The mapping of the other statuses to `INTERPRET`/`DISPLAY`/`IGNORE` is the module's reading of AUDIT_NOTE §4 (table in the module docstring); `engine_use` still governs engine behaviour (§11.4).
+  - Q-2 stays open. DQ-01 and DQ-03 are untouched.
 
 ### P1.4 — Curated build · MUST
 
