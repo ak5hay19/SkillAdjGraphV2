@@ -221,6 +221,11 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
 - **Verification:** `python -m skillgraph verify-sources`; `python -m pytest tests/integration/test_integrity.py`.
 - **Definition of done:** integrity is checked automatically before every build.
 - **Effort:** 2–4 h.
+- **Status (2026-10-31):** implemented, **uncommitted, awaiting review**. All four acceptance criteria are met. The definition of done ("integrity is checked automatically before every build") is **NOT yet met and remains pending until P1.4** implements `build` and invokes the verifier. Evidence:
+  - `python -m skillgraph verify-sources` on the real data: exit 0; 18 of 18 local files matched; 4 `NO_LOCAL_FILE` (C3 `FAIL_HTTP`, C4 `NOT_FOUND`, D1 `FAIL_HTTP`, D2 `NOT_FOUND`); 265 of 265 extraction rows resolved (0 `UNRESOLVED` rows present to exclude); 52 of 52 overlay `evidence_sha256` values resolved.
+  - Beyond the criteria, each row's `source_file` must also equal the manifest path for its hash (ARCHITECTURE §3 principle 3), and any check that cannot run (missing manifest, overlay or extraction CSVs, missing column, or a header-only CSV with no data rows) fails the report instead of being skipped. Several manifest paths may share one hash; a row must still name its own manifest path. A hash recorded for a non-local item (C3, D1) does not count as a resolvable source.
+  - Exit codes: 0 verified, 1 `SourceIntegrityError` (the full report is still printed on stdout), 3 settings or configuration error (`SettingsError`, invalid values, unreadable file; no traceback, empty stdout).
+  - `tests/integration/test_integrity.py`: 35 tests, synthetic trees in temporary directories (including the one-altered-byte case); the two real-data tests skip when `data/` is absent. Full suite: 86 passed. Legacy baseline: MATCH, 23 passed, 1 failed (DQ-01 unresolved), not a passing suite.
 
 ### P1.2 — Source-of-truth schemas · MUST
 
