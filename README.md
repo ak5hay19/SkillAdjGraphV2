@@ -18,7 +18,7 @@ Every value carries its evidence class and source. A path is a reading of entry 
 | Planning | Approved baseline: [`ARCHITECTURE.md`](ARCHITECTURE.md), [`API_SPEC.md`](API_SPEC.md), [`TASKS.md`](TASKS.md) |
 | Repository foundation | Done on branch `chore/repo-foundation`, committed in `fbdc28f` ([TASKS P0.1](TASKS.md#p01--repository-hygiene--must--done-fbdc28f)) |
 | Python environment | Done: isolated `.venv` from a hashed lock ([TASKS P0.2](TASKS.md#p02--dependency-specification-lock-and-venv--must--done)) |
-| Application foundation | Package skeleton, settings, logging and CLI stubs committed in `63a83dd` (P0.3). Test infrastructure committed in `33ac1cc` (P0.4). **No business logic yet.** The next task is TASKS P1.1. |
+| Application and Phase 1 | Package setup, configuration, logging, the curated build, eligibility structuring and validation are implemented and committed (P0.3 `63a83dd`, P0.4 `33ac1cc`, P1.1–P1.6 up to `2a65abd`). P1.1–P1.6 are **DONE as engineering stages with documented exceptions**. Phase 1 is **not declared complete**: evidence gates remain open. See the Phase 1 closure assessment in [`TASKS.md`](TASKS.md). |
 | Legacy test baseline | **23 passed, 1 failed (DQ-01, unresolved; checked against an exact baseline)**. This is not a passing suite. See [`docs/baselines/legacy_tests_2026-10-31.md`](docs/baselines/legacy_tests_2026-10-31.md). |
 | Labour-market module (A) | Not assessed; the graph-only demo is the baseline plan |
 
