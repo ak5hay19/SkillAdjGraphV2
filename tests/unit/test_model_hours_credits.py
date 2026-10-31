@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from skillgraph.model import conflict, eligibility, evidence, occupation, qualification, source
 from skillgraph.model.evidence import CreditValue
-from skillgraph.model.qualification import HoursBreakdown
+from skillgraph.model.qualification import CreditGroup, HoursBreakdown
 
 MODULES = [evidence, source, occupation, conflict, eligibility, qualification]
 
@@ -44,7 +44,8 @@ def test_models_were_discovered():
 
 @pytest.mark.parametrize(("model", "name", "field"), FIELD_PARAMS)
 def test_credit_fields_are_credit_values_and_nothing_else_is(model, name, field):
-    is_credit_typed = mentions(field.annotation, CreditValue)
+    # CreditGroup wraps a CreditValue (OV-034/035); it is the one credit container besides CreditValue itself.
+    is_credit_typed = mentions(field.annotation, CreditValue) or mentions(field.annotation, CreditGroup)
     assert ("credit" in name.lower()) == is_credit_typed, f"{model.__name__}.{name}"
     if "hour" in name.lower():
         assert not is_credit_typed and "credit" not in name.lower()

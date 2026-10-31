@@ -23,6 +23,7 @@ from .ids import (
     NcoCode,
     NosCode,
     NosId,
+    OverlayId,
     QualificationCode,
     QualificationId,
     make_id,
@@ -127,6 +128,24 @@ class NosMembership(SchemaModel):
         return self
 
 
+class CreditGroup(SchemaModel):
+    """One printed credit value that covers several NOS-table rows (merged cell; OV-034/035, DQ-12).
+
+    A representation only: the members keep their own credit values exactly as extracted, and nothing is copied from
+    one row to another. It is recorded only for an approved ``PROPOSED_REPRESENTATION``. Credits stay ``NOT_USED``.
+    """
+
+    member_s_nos: Annotated[list[SNo], Field(min_length=2)]  # ascending, unique; each is a membership s_no
+    credits: CreditValue  # the single printed value; evidence_id cites the overlay's geometry evidence
+    overlay_ids: Annotated[list[OverlayId], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def _check(self) -> CreditGroup:
+        if self.member_s_nos != sorted(set(self.member_s_nos)):
+            raise ValueError("member_s_nos must be ascending and unique")
+        return self
+
+
 class ResolvedTarget(SchemaModel):
     """A name-based link from a claim to a catalogue qualification. Always INFERENCE, never an official edge (DQ-15)."""
 
@@ -169,6 +188,8 @@ class Qualification(SchemaModel):
     version_info: dict[Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]+$")], DisplayValued[str]] = {}
     nos_memberships: list[NosMembership] = []
     modules: list[Module] = []
+    credit_groups: list[CreditGroup] = []
+    # Structured rules arrive with P1.5; until then a CURATED record may omit them (no placeholder is invented).
     eligibility: EligibilitySpec | None = None
     progression_claims: list[ProgressionClaim] = []
     quality_flags: list[QualityFlag] = []
@@ -186,11 +207,11 @@ class Qualification(SchemaModel):
     def _check_curated(self) -> None:
         if self.titles.qf is None:
             raise ValueError("a CURATED qualification requires the QF title")
-        if self.min_age is None or self.eligibility is None:
-            raise ValueError("a CURATED qualification requires min_age and eligibility")
+        if self.min_age is None:
+            raise ValueError("a CURATED qualification requires min_age")
         if not self.hours.is_complete:
             raise ValueError("a CURATED qualification states all five hours values")
-        if self.eligibility.age_rule.qualification_code != self.code:
+        if self.eligibility is not None and self.eligibility.age_rule.qualification_code != self.code:
             raise ValueError("eligibility rules belong to another qualification")
         module_ids = {m.id for m in self.modules}
         if len(module_ids) != len(self.modules):
@@ -208,6 +229,9 @@ class Qualification(SchemaModel):
         numbers = [m.s_no for m in self.nos_memberships]
         if len(set(numbers)) != len(numbers):
             raise ValueError("duplicate S.No. among NOS memberships")
+        for g in self.credit_groups:
+            if not set(g.member_s_nos) <= set(numbers):
+                raise ValueError("a credit group refers to an S.No. that is not a NOS membership")
         claim_ids = [c.id for c in self.progression_claims]
         if len(set(claim_ids)) != len(claim_ids) or any(c.qualification_id != self.id for c in self.progression_claims):
             raise ValueError("progression claims must be unique and belong to this qualification")
@@ -216,7 +240,13 @@ class Qualification(SchemaModel):
         # Catalogue row only (ARCHITECTURE §10.2): level, notional hours and credits, no QF evidence.
         if self.titles.catalogue is None:
             raise ValueError("a CATALOGUE_ONLY qualification requires the catalogue title")
-        if self.nos_memberships or self.modules or self.progression_claims or self.eligibility is not None:
+        if (
+            self.nos_memberships
+            or self.modules
+            or self.progression_claims
+            or self.credit_groups
+            or self.eligibility is not None
+        ):
             raise ValueError("a CATALOGUE_ONLY qualification has no NOS, module, claim or eligibility data")
         if self.min_age is not None:
             raise ValueError("the catalogue does not state a minimum age")

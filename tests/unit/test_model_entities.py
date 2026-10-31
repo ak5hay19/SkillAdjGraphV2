@@ -52,8 +52,8 @@ class TestQualification:
 
     def test_curated_requires_full_evidence(self):
         refused(Qualification, curated(titles={"catalogue": "x"}), "QF title")
-        refused(Qualification, curated(min_age=None), "min_age and eligibility")
-        refused(Qualification, curated(eligibility=None), "min_age and eligibility")
+        refused(Qualification, curated(min_age=None), "requires min_age")
+        assert Qualification.model_validate(curated(eligibility=None)).eligibility is None  # P1.5 supplies rules
         partial = {"total": official(100.0, engine_use="SAFE_HOURS")}
         refused(Qualification, curated(hours=partial), "all five hours")
 

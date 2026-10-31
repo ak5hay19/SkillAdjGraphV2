@@ -318,6 +318,8 @@ QualificationRef { id, code, slug, title, nsqf_level: number | null }
 
 (The counts and check totals are placeholders.)
 
+(The `build.overlays` values are illustrative and do not match the current data. `applied` lists rows classified `APPLY`, that is, approved `PROPOSED_*` rows written to a curated record: `[]` with the empty approvals file. `OV-001` and `OV-028` are `CONFIRMED_BY_GEOMETRY` and apply nothing. `display_only` is the number of rows classified `DISPLAY` (11 today), not the number whose `engine_use` is `DISPLAY_ONLY` (7). See `TASKS.md` P1.4 and `build_manifest.json`.)
+
 - **Errors:** none besides `500`. A missing build is reported in the body (`NOT_BUILT`), not as `503`.
 - **Provenance / warnings:** `known_findings`, `sources_unavailable`, `licence_notice`.
 - **Phase:** service in P1 (validation report); HTTP in P5.1.

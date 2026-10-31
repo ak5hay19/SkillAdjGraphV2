@@ -7,20 +7,26 @@ Commands are stubs until their checkpoint; stubs exit with code 2. Implemented c
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from collections.abc import Sequence
 
 from pydantic import ValidationError
 
+from skillgraph.curation.build import build
+from skillgraph.curation.config import ConfigError
+from skillgraph.curation.errors import BuildError
+from skillgraph.curation.overlay import OverlayError
 from skillgraph.logging_setup import log_event, setup_logging
 from skillgraph.provenance.manifest import MANIFEST_NAME, OVERLAY_NAME, SourceIntegrityError, verify_sources
+from skillgraph.model.ids import IdError
 from skillgraph.settings import SettingsError, load_settings
 
 NOT_IMPLEMENTED_EXIT = 2
 FAILED_EXIT = 1
 ERROR_EXIT = 3
-IMPLEMENTED = {"verify-sources"}
+IMPLEMENTED = {"verify-sources", "build"}
 
 # command -> (checkpoint that implements it, help text)
 COMMANDS: dict[str, tuple[str, str]] = {
@@ -81,10 +87,45 @@ def _verify_sources() -> int:
     return 0
 
 
+def _build() -> int:
+    """Build the curated dataset. Exit 0 and the build manifest on stdout; 1 when the data fails a check (the full
+    integrity report is printed for a SourceIntegrityError); 3 when the command cannot run. Nothing is installed on
+    failure."""
+    logger = setup_logging()
+    try:
+        settings = load_settings()
+    except (SettingsError, ValidationError, OSError, UnicodeDecodeError) as exc:
+        print(f"build: invalid settings: {_one_line(exc)}", file=sys.stderr)
+        log_event(logger, "build.settings_error", logging.ERROR, error=type(exc).__name__)
+        return ERROR_EXIT
+    log_event(logger, "build.start", raw_root=str(settings.data_path("raw_dir")))
+    try:
+        result = build(settings)
+    except SourceIntegrityError as exc:
+        print(exc.report.model_dump_json(indent=2))
+        print(f"build: SourceIntegrityError: {exc}", file=sys.stderr)
+        log_event(logger, "build.failed", logging.ERROR, error="SourceIntegrityError", detail=str(exc))
+        return FAILED_EXIT
+    except (BuildError, OverlayError, IdError, ValidationError, KeyError, ValueError) as exc:
+        print(f"build: {type(exc).__name__}: {_one_line(exc)}", file=sys.stderr)
+        log_event(logger, "build.failed", logging.ERROR, error=type(exc).__name__, detail=_one_line(exc))
+        return FAILED_EXIT
+    except (ConfigError, OSError, UnicodeDecodeError) as exc:
+        print(f"build: cannot run: {_one_line(exc)}", file=sys.stderr)
+        log_event(logger, "build.cannot_run", logging.ERROR, error=type(exc).__name__)
+        return ERROR_EXIT
+    log_event(logger, "build.ok", data_build_id=result.data_build_id, reused=result.reused,
+              overlays=result.manifest["overlay_classification_counts"])
+    print(json.dumps(result.manifest, indent=2, sort_keys=True, ensure_ascii=False))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "verify-sources":
         return _verify_sources()
+    if args.command == "build":
+        return _build()
     checkpoint = COMMANDS[args.command][0]
     print(f"{args.command}: not implemented ({checkpoint})", file=sys.stderr)
     return NOT_IMPLEMENTED_EXIT

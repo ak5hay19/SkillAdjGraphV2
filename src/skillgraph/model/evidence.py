@@ -156,9 +156,21 @@ class Valued(SchemaModel, Generic[T]):
     value_status: ValueStatus | None = None
     engine_use: EngineUse | None = None
     conflict_id: ConflictId | None = None
+    # Only for CORRECTION_APPLIED (ARCHITECTURE §7 principle 2): the extraction value that the applied overlay value
+    # replaced, and the evidence for it. ``source_value = ""`` (the source printed nothing) differs from None (absent).
+    source_value: str | None = None
+    source_evidence_id: EvidenceId | None = None
 
     @model_validator(mode="after")
     def _check_provenance(self) -> Valued[T]:
+        corrected = self.value_status is ValueStatus.CORRECTION_APPLIED
+        has_source = self.source_value is not None or self.source_evidence_id is not None
+        if has_source and not corrected:
+            raise ValueError("source_value and source_evidence_id are only for value_status CORRECTION_APPLIED")
+        if corrected and (self.source_value is None or self.source_evidence_id is None):
+            raise ValueError("a CORRECTION_APPLIED value requires source_value and source_evidence_id")
+        if corrected and self.source_evidence_id == self.evidence_id:
+            raise ValueError("source_evidence_id must differ from evidence_id")
         if self.evidence_class in STORED_CLASSES and self.evidence_id is None:
             raise ValueError(f"a {self.evidence_class.value} value requires evidence_id")
         if self.evidence_class is EvidenceClass.OFFICIAL and self.value_status is None:

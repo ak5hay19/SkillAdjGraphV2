@@ -34,6 +34,7 @@ class DataPaths(_Strict):
     raw_dir: Path
     extracted_dir: Path
     audit_dir: Path
+    acquisition_dir: Path = Path("processed/acquisition_2026-10-30")  # the catalogue CSV (P1.4)
     curated_dir: Path
     outputs_dir: Path
     labour_dir: Path

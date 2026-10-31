@@ -11,9 +11,9 @@ from typing import Annotated
 
 from pydantic import Field, StrictBool, StrictFloat, StrictInt, StrictStr, StringConstraints, model_validator
 
-from .base import SNo, SchemaModel
-from .evidence import EngineUse, QualityFlag
-from .ids import EvidenceId, OverlayId, RuleId, split_id
+from .base import MinAge, SchemaModel, SNo
+from .evidence import SAFE_USES, EngineUse, OfficialValued, QualityFlag, ValueStatus
+from .ids import EvidenceId, IdKind, OverlayId, QualificationId, RuleId, make_id, split_id
 
 
 class Verdict(StrEnum):
@@ -141,4 +141,96 @@ class EligibilitySpec(SchemaModel):
         numbers = [r.s_no for r in self.rows]
         if numbers != sorted(set(numbers)):
             raise ValueError("rows must have distinct, ascending s_no")
+        return self
+
+
+class SourceRowKind(StrEnum):
+    ELIGIBILITY_ROW = "ELIGIBILITY_ROW"
+    AGE_9C = "AGE_9C"
+
+
+# A text value in one of these states is not substantiated; only these statuses lift an uncertain extraction.
+_UNCERTAIN = frozenset({ValueStatus.PARSED_UNCERTAIN, ValueStatus.UNRESOLVED})
+_SUBSTANTIATED = frozenset({ValueStatus.CONFIRMED_BY_GEOMETRY, ValueStatus.CORROBORATED, ValueStatus.CORRECTION_APPLIED})
+
+
+class AuditHint(SchemaModel):
+    """An overlay row that states an ``engine_use`` for a *different* field than the row's own row-level component.
+
+    It is audit metadata only: it never sets or raises the effective ``engine_use`` of the row or of any field.
+    """
+
+    overlay_id: OverlayId
+    field: StrictStr
+    engine_use: EngineUse
+    engine_constraint: StrictStr | None = None
+
+
+class EligibilitySourceRow(SchemaModel):
+    """An eligibility row as extracted, with overlay-resolved fields, before P1.5 structures it into components.
+
+    It is the pre-structuring record of ARCHITECTURE §9.2's ``EligibilityRow``: the same ``rule:`` id, the verbatim
+    text and the provenance, but no components (none are invented). Each text field keeps the extraction value (a
+    corrected field carries ``source_value``) and its own ``value_status`` and ``engine_use``: a correction of one
+    field never changes the status or safety of another.
+
+    ``engine_use`` is the effective row-level use and is never safer than the row's own row-level component
+    (``raw_row_text`` of an eligibility row, ``min_age`` of the age row): a safe use is allowed only if that component
+    carries the same use. A decision the overlay states about another field (for example the experience cell of
+    Q2301 row 1) is kept in ``audit_hints`` and authorizes nothing.
+
+    A computing (safe or conditional) row-level use also requires substantiation: no required text value may be
+    ``PARSED_UNCERTAIN`` or ``UNRESOLVED``, and if the extraction status of the row is uncertain, the row-level
+    component must have been confirmed by geometry, corroborated or corrected. ``audit_hints`` are never evidence.
+
+    ``engine_constraint`` is the audit's wording for the row-level decision, kept verbatim and separate from evidence
+    and classification. It is documentation for P1.5, not executable logic, and its presence never changes
+    ``engine_use``; ``SAFE_WITH_CONSTRAINT`` requires it because that use is valid only within the constraint.
+    """
+
+    id: RuleId
+    qualification_id: QualificationId
+    kind: SourceRowKind
+    s_no: SNo | None = None
+    raw_academic_or_skill: OfficialValued[str] | None = None
+    raw_required_experience: OfficialValued[str] | None = None
+    raw_row_text: OfficialValued[str] | None = None
+    min_age: OfficialValued[MinAge] | None = None
+    extraction_status: ValueStatus  # the extraction's row status, never cleared by a field-level overlay
+    engine_use: EngineUse
+    engine_constraint: Annotated[str, StringConstraints(min_length=1)] | None = None
+    overlay_ids: list[OverlayId] = []
+    pending_overlay_ids: list[OverlayId] = []
+    audit_hints: list[AuditHint] = []
+    flags: list[QualityFlag] = []
+    note: str = ""
+
+    @model_validator(mode="after")
+    def _check(self) -> EligibilitySourceRow:
+        code, tail = split_id(self.id)[1].rsplit("/", 1)
+        if make_id(IdKind.QUAL, code) != self.qualification_id:
+            raise ValueError("id must belong to the qualification")
+        if self.kind is SourceRowKind.AGE_9C:
+            if tail != "AGE" or self.s_no is not None or self.min_age is None:
+                raise ValueError("an AGE_9C row has id rule:<code>/AGE, no S.No. and a min_age")
+        else:
+            if self.s_no is None or tail != f"E{self.s_no}" or self.min_age is not None:
+                raise ValueError("an eligibility row has id rule:<code>/E<s_no>, an S.No. and no min_age")
+            if self.raw_row_text is None:
+                raise ValueError("an eligibility row requires raw_row_text")
+        component = self.min_age if self.kind is SourceRowKind.AGE_9C else self.raw_row_text
+        if self.engine_use in SAFE_USES and component.engine_use is not self.engine_use:
+            raise ValueError("a row-level engine_use cannot be safer than the row's own row-level component")
+        if self.engine_use in SAFE_USES:
+            if self.extraction_status in _UNCERTAIN and component.value_status not in _SUBSTANTIATED:
+                raise ValueError(
+                    "a computing row-level engine_use requires a substantiated row: the extraction status is "
+                    f"{self.extraction_status.value} and the row-level component is only {component.value_status.value}"
+                )
+            for name in ("raw_academic_or_skill", "raw_required_experience", "raw_row_text", "min_age"):
+                cell = getattr(self, name)
+                if cell is not None and cell.value_status in _UNCERTAIN:
+                    raise ValueError(f"a computing row-level engine_use is refused while {name} is {cell.value_status.value}")
+        if self.engine_use is EngineUse.SAFE_WITH_CONSTRAINT and not self.engine_constraint:
+            raise ValueError("SAFE_WITH_CONSTRAINT requires the engine_constraint it is valid within")
         return self

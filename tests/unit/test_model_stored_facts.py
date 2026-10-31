@@ -127,8 +127,10 @@ def test_official_value_with_open_conflict_is_still_not_safe():
 
 
 def test_official_keeps_its_cited_corroboration_and_correction_statuses():
-    for status in ("CORROBORATED", "CONFIRMED_BY_GEOMETRY", "CORRECTION_APPLIED", "PARSED_UNCERTAIN"):
+    for status in ("CORROBORATED", "CONFIRMED_BY_GEOMETRY", "PARSED_UNCERTAIN"):
         assert OfficialValued[float].model_validate(official(1.0, status=status))
+    corrected = official(1.0, status="CORRECTION_APPLIED", source_value="", source_evidence_id=ev(9))
+    assert OfficialValued[float].model_validate(corrected).source_value == ""
 
 
 def test_general_valued_is_unchanged_and_still_serves_other_contexts():

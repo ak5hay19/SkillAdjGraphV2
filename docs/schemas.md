@@ -87,6 +87,8 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `value_status` | `ValueStatus \| null` | default `None` |  |
 | `engine_use` | `EngineUse \| null` | default `None` |  |
 | `conflict_id` | `str \| null` | default `None` |  |
+| `source_value` | `str \| null` | default `None` |  |
+| `source_evidence_id` | `str \| null` | default `None` |  |
 
 ### OfficialValued
 
@@ -98,6 +100,8 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `value_status` | `ValueStatus \| null` | default `None` |  |
 | `engine_use` | `EngineUse \| null` | default `None` |  |
 | `conflict_id` | `str \| null` | default `None` |  |
+| `source_value` | `str \| null` | default `None` |  |
+| `source_evidence_id` | `str \| null` | default `None` |  |
 
 ### DisplayValued
 
@@ -109,6 +113,8 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `value_status` | `ValueStatus \| null` | default `None` |  |
 | `engine_use` | `EngineUse \| null` | default `None` |  |
 | `conflict_id` | `str \| null` | default `None` |  |
+| `source_value` | `str \| null` | default `None` |  |
+| `source_evidence_id` | `str \| null` | default `None` |  |
 
 ### CreditValue
 
@@ -120,6 +126,8 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `value_status` | `ValueStatus \| null` | default `None` |  |
 | `engine_use` | `EngineUse \| null` | default `None` |  |
 | `conflict_id` | `str \| null` | default `None` |  |
+| `source_value` | `str \| null` | default `None` |  |
+| `source_evidence_id` | `str \| null` | default `None` |  |
 
 
 ## `skillgraph.model.source`
@@ -215,6 +223,8 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 
 **UnknownReasonCode** (enum): `INPUT_NOT_DECLARED`, `RELEVANCE_NOT_DECLARED`, `CONFIG_UNSET`, `EQUIVALENCE_UNDEFINED`, `CREDENTIAL_ORDER_UNDEFINED`, `ENROLMENT_NOT_MODELLED`, `LITERACY_NOT_MODELLED`, `NTC_NAC_CITS_NOT_MODELLED`, `DIPLOMA_YEAR_NOT_MODELLED`, `REVIEW_FLAG`, `UNCERTAIN_EXTRACTION`, `SOURCE_CONFLICT`, `OVERLAY_NOT_APPROVED`
 
+**SourceRowKind** (enum): `ELIGIBILITY_ROW`, `AGE_9C`
+
 
 ### Component
 
@@ -271,6 +281,36 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 |---|---|---|---|
 | `age_rule` | `AgeRule` | yes |  |
 | `rows` | `list[EligibilityRow]` | yes |  |
+
+### AuditHint
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `overlay_id` | `str` | yes | pattern='^OV-\\d{3}$' |
+| `field` | `str` | yes |  |
+| `engine_use` | `EngineUse` | yes |  |
+| `engine_constraint` | `str \| null` | default `None` |  |
+
+### EligibilitySourceRow
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `id` | `str` | yes | pattern='^rule:[A-Z]{2,6}/Q\\d{4}/(?:E\\d{1,3}\|AGE)$' |
+| `qualification_id` | `str` | yes | pattern='^qual:[A-Z]{2,6}/Q\\d{4}$' |
+| `kind` | `SourceRowKind` | yes |  |
+| `s_no` | `int \| null` | default `None` |  |
+| `raw_academic_or_skill` | `OfficialValued[str] \| null` | default `None` |  |
+| `raw_required_experience` | `OfficialValued[str] \| null` | default `None` |  |
+| `raw_row_text` | `OfficialValued[str] \| null` | default `None` |  |
+| `min_age` | `OfficialValued[int] \| null` | default `None` |  |
+| `extraction_status` | `ValueStatus` | yes |  |
+| `engine_use` | `EngineUse` | yes |  |
+| `engine_constraint` | `str \| null` | default `None` |  |
+| `overlay_ids` | `list[str]` | default `[]` |  |
+| `pending_overlay_ids` | `list[str]` | default `[]` |  |
+| `audit_hints` | `list[AuditHint]` | default `[]` |  |
+| `flags` | `list[QualityFlag]` | default `[]` |  |
+| `note` | `str` | default `''` |  |
 
 
 ## `skillgraph.model.qualification`
@@ -331,6 +371,14 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `credits` | `CreditValue` | yes |  |
 | `is_bridge` | `bool` | yes |  |
 
+### CreditGroup
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `member_s_nos` | `list[int]` | yes | min_length=2 |
+| `credits` | `CreditValue` | yes |  |
+| `overlay_ids` | `list[str]` | yes | min_length=1 |
+
 ### ResolvedTarget
 
 | Field | Type | Required | Constraints |
@@ -371,6 +419,7 @@ and the validation report (TASKS P1.4, P1.6). The schemas check format and local
 | `version_info` | `dict[str, DisplayValued[str]]` | default `{}` |  |
 | `nos_memberships` | `list[NosMembership]` | default `[]` |  |
 | `modules` | `list[Module]` | default `[]` |  |
+| `credit_groups` | `list[CreditGroup]` | default `[]` |  |
 | `eligibility` | `EligibilitySpec \| null` | default `None` |  |
 | `progression_claims` | `list[ProgressionClaim]` | default `[]` |  |
 | `quality_flags` | `list[QualityFlag]` | default `[]` |  |

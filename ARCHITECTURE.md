@@ -476,6 +476,8 @@ This gives the required semantics:
 | `DISPLAY_ONLY` | Shown, never computed |
 | `NOT_USED` | Never read by the engine. This applies to all credits. |
 
+**Row-level status in the curated build (P1.4).** The effective row-level `engine_use` of a source row is the use of the row's own row-level component (`raw_row_text`; `min_age` for the age row). It is never safer than that component, and a computing (safe or conditional) row-level use is refused by the model unless the row is substantiated: no required text value may be `PARSED_UNCERTAIN` or `UNRESOLVED`, and an uncertain extraction needs its row-level component confirmed by geometry, corroborated or corrected. An overlay decision about another field is kept as an `audit_hint` and authorizes nothing. Example: SSMO (AMH/Q2301) row 1: the experience component is `SAFE_HARD_RULE` (OV-001, geometry-confirmed), but the academic component and the row text are still `PARSED_UNCERTAIN`, so the whole row is `UNKNOWN` until they are substantiated. The audit's "safe now" for SSMO row 1 therefore refers to the experience component only. `engine_constraint` is carried on the curated row verbatim (documentation for P1.5, not executable, never raising `engine_use`); `SAFE_WITH_CONSTRAINT` requires it.
+
 ### 11.5 Worked logic (illustrative, not results)
 
 Take SSMO row 9: "Previous relevant Qualification of NSQF Level 2.5 ‖ 3 year relevant experience". The components are `PRIOR_NSQF_LEVEL(2.5, relevant)` AND `EXPERIENCE_MIN_YEARS(3, relevant)`.

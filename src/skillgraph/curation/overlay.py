@@ -58,6 +58,18 @@ OVERLAY_COLUMNS = (
     "status",
     "engine_use",
 )
+# Read when present (the audit overlay has them); a synthetic overlay may omit them. An APPLIED row must carry its
+# evidence: the build fails closed on an empty evidence field (curation/build.py).
+OPTIONAL_COLUMNS = (
+    "evidence_source_file",
+    "evidence_sha256",
+    "evidence_page",
+    "evidence_location",
+    "method",
+    "rationale",
+    "engine_constraint",
+    "decision_ref",
+)
 _NonEmpty = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
@@ -125,6 +137,19 @@ class OverlayRow(_Frozen):
     overlay_value: str
     status: OverlayStatus
     engine_use: EngineUse
+    evidence_source_file: str = ""
+    evidence_sha256: str = ""
+    evidence_page: str = ""
+    evidence_location: str = ""
+    method: str = ""
+    rationale: str = ""
+    engine_constraint: str = ""
+    decision_ref: str = ""
+
+    @property
+    def decision_refs(self) -> list[str]:
+        """``decision_ref`` is ``;``-separated (e.g. ``A3;D1``)."""
+        return [d.strip() for d in self.decision_ref.split(";") if d.strip()]
 
 
 class Approval(_Frozen):
@@ -199,7 +224,8 @@ def load_overlay(path: Path) -> list[OverlayRow]:
         if any(rec.get(c) is None for c in OVERLAY_COLUMNS) or None in rec:
             raise OverlayError(f"{path.name} line {line}: wrong number of columns")
         try:
-            rows.append(OverlayRow(**{c: rec[c] for c in OVERLAY_COLUMNS}))
+            optional = {c: rec[c] for c in OPTIONAL_COLUMNS if rec.get(c) is not None}
+            rows.append(OverlayRow(**{c: rec[c] for c in OVERLAY_COLUMNS}, **optional))
         except ValidationError as exc:
             raise OverlayError(f"{path.name} line {line}: {_errors(exc)}") from None
     dupes = sorted(k for k, n in Counter(r.overlay_id for r in rows).items() if n > 1)
