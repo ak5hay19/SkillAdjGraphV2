@@ -1,0 +1,273 @@
+# Eligibility rule structuring table (TASKS P1.5).
+#
+# LOADED BY THE BUILD since curation code version p1.5-1 (Checkpoint C): `skillgraph build` validates this file
+# (src/skillgraph/curation/eligibility_rules.py), structures every row of eligibility_source_rows.json with it and
+# stores the result in Qualification.eligibility. Its content (not its comments) is part of the data_build_id
+# (eligibility_rules_digest): any change to a rule, parameter, reason or guard gives a new build, and a stale,
+# incomplete or inconsistent table fails the build and installs nothing. It is reviewed in
+# data/curated/<build_id>/eligibility_rules_review.md (a snapshot for one reviewed build, not regenerated
+# automatically). Corrections go through this file or the audit overlay, never through code constants (TASKS P1.5).
+#
+# What the table says, per source row (eligibility_source_rows.json of the build):
+#   - which cell each component comes from and the verbatim text it is bounded by;
+#   - the component type and params, in the order of the printed cells (academic first, then experience);
+#   - where the component's `safe` flag may come from (`safe_from`, below), never a literal boolean.
+#
+# What the table does NOT say, on purpose (all of it is read from the source row at build time):
+#   - row-level engine_use and engine_constraint (carried verbatim from the decided overlay row; only the
+#     `expect` guards below repeat them, so a stale table fails loudly instead of silently);
+#   - evidence ids (a component takes the evidence of the cell named by `cell`; no new OFFICIAL evidence);
+#   - overlay ids and flags (carried from the source row);
+#   - component_id and requirement_text (derived downstream, see `conventions`).
+#
+# `safe_from` (the parser must compute `safe`; this file can never raise it):
+#   row   safe only if the source row's effective engine_use is a computing use (the P1.4 model has already
+#         refused a computing row use that is not substantiated);
+#   cell  safe only if the named cell's own engine_use is a computing use (an independently supported component
+#         inside an UNKNOWN row, Decision 2);
+#   none  never safe.
+# A component with safe = false evaluates to UNKNOWN with its `unknown_reason` (ARCHITECTURE 11.3).
+# `unknown_reason` here applies if and only if the COMPUTED `safe` is false (so a later audit decision that makes a
+# cell safe drops the reason automatically); a computed-unsafe component without a reason fails the build, and a
+# computed-safe component never keeps one (ARCHITECTURE 9.2 invariant).
+# `text` is a guard, not the source of truth: it must equal the source cell (empty cells are ""), and the cells joined
+# with " || " must equal the row's raw_text (ARCHITECTURE 9.2, cell mapping).
+#
+# `review`: SUPPORTED = follows from the cell text plus a cited document or a recorded decision (P1.5-D1..D4,
+# P1.5-O1..O7, ARCHITECTURE section 20.2). Nothing here approves an overlay or raises an engine_use.
+
+conventions:
+  version: 1
+  decisions:
+    - {id: P1.5-D1, ref: "TASKS P1.5", text: "SSMO E1 (AMH/Q2301) is UNKNOWN at row level. Its experience cell is geometry-confirmed (SAFE_HARD_RULE, OV-001); its academic cell and row text stay PARSED_UNCERTAIN. The row is not upgraded."}
+    - {id: P1.5-D2, ref: "TASKS P1.5", text: "Option (a): an independently supported component inside an UNKNOWN row may stay evaluable. A component never raises its row's engine_use; each component is bounded by its own cell text, evidence and classification; UNKNOWN parts stay UNKNOWN or UNMODELLED."}
+    - {id: P1.5-D3, ref: "TASKS P1.5", text: "component_id and requirement_text are derived downstream, not stored in the model."}
+    - {id: P1.5-D4, ref: "TASKS P1.5", text: "Structured rules are stored in Qualification.eligibility; eligibility_source_rows.json is unchanged and remains the provenance record."}
+  component_id: "<source row id>#c<n>, n = 1-based position in `components`. Examples in API_SPEC 2.4: rule:AMH/Q2301/E9#c1 (level), #c2 (experience), rule:AMH/Q2301/AGE#c1."
+  component_order: "Printed cell order: the academic/skill cell first, then the experience cell. An age row has the single component #c1."
+  requirement_text: "Derived from type and params by fixed templates. For UNMODELLED components and for components capped by uncertain extraction it is the verbatim cell text (no paraphrase)."
+  param_names: "min_age (int), grade (int 0-12), level (float), years (float); credential is a PostSchoolCredentialType value (UG_DIPLOMA, UG_CERTIFICATE); below_required_verdict is only UNKNOWN and only on Q0301/E1 (P1.5-O3). Documented in ARCHITECTURE 9.2 and API_SPEC 2.4."
+  cell_mapping: "One component per printed cell, in order; cells are joined with ' || ' in raw_text, never trimmed (SSMO rows 2-4 end with ' || '). A cell that contains ' || ' fails the build. An approved correction on a cell is not supported yet (P1.5-A2)."
+  age_rule_text: "The verbatim item 9c text ('Age: 18 years') is in the extraction but not yet carried by P1.4; AgeRule.raw_text is blocked on decision P1.5-A1. The age components below are guarded by the min_age cell only."
+  requires_relevance: "Stored as a component field (never inside params); projected into response params when true (API_SPEC 2.4)."
+  absent_types: "No component type exists for equivalence, exemption, RPL or reduced hours (ComponentType has six members). 'or equivalent' is the flag or_equivalent only."
+  q3: "Stored only as or_equivalent = true. Q-3 stays at its default (UNKNOWN, EQUIVALENCE_UNDEFINED); evaluation is P3.2."
+  q4: "Q-4 stays at its default: literacy, enrolment, NTC/NAC/CITS and diploma-year routes are UNMODELLED with the reason codes below."
+  level_x: "PRIOR_NSQF_LEVEL carries only the printed level (D3). nsqf_level_match is a profile/engine config; nothing is embedded here."
+  school_grade: "'Nth grade pass' maps to SCHOOL_GRADE_MIN(grade N); 'higher grade passed satisfies it' is AS-5 / Q-9 (resolved by default), applied by the engine, reversible in this file's review."
+
+# Remaining requests (not decisions of this table).
+audit_review_requests:
+  - id: P1.5-R1
+    status: OPEN_REQUEST_ONLY   # no overlay row is created, no evidence or classification changes, nothing is approved
+    text: "Ask the audit whether the experience cells of AMH/Q2301 E5 and E6 and AMH/Q0301 E2 and E5 have a substantiated engine use. Until an audit decision exists they stay capped (UNCERTAIN_EXTRACTION; ENGINE_USE_UNDECIDED for Q0301/E5)."
+    cells: [rule:AMH/Q2301/E5#c2, rule:AMH/Q2301/E6#c2, rule:AMH/Q0301/E2#c2, rule:AMH/Q0301/E5#c2]
+
+# Q0103 = Inline Checker (IC) · Q0301 = Sewing Machine Operator (SMO) · Q2101 = Production Supervisor (PS)
+# Q2301 = Specialized Sewing Machine Operator (SSMO)
+rules:
+
+  # ======================================================== AMH/Q0103  (Inline Checker)
+  - id: rule:AMH/Q0103/AGE
+    review: SUPPORTED
+    expect: {row_engine_use: SAFE_HARD_RULE, min_age: "18"}
+    components:
+      - {cell: min_age, text: "18", type: AGE_MIN, params: {min_age: 18}, safe_from: row}
+
+  - id: rule:AMH/Q0103/E1
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "10th Grade pass || 1.5-year relevant experience"}
+    components:
+      - {cell: academic, text: "10th Grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 10}, safe_from: row}
+      - {cell: experience, text: "1.5-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.5}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q0103/E2
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "8th Grade pass || 4.5-year relevant experience"}
+    components:
+      - {cell: academic, text: "8th Grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 8}, safe_from: row}
+      - {cell: experience, text: "4.5-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 4.5}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q0103/E3
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 3 || 1.5-year relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 3", type: PRIOR_NSQF_LEVEL, params: {level: 3.0}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "1.5-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.5}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q0103/E4
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 2.5 || 3-year relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 2.5", type: PRIOR_NSQF_LEVEL, params: {level: 2.5}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "3-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 3.0}, requires_relevance: true, safe_from: row}
+
+  # ======================================================== AMH/Q0301  (Sewing Machine Operator)
+  - id: rule:AMH/Q0301/AGE
+    review: SUPPORTED
+    expect: {row_engine_use: SAFE_HARD_RULE, min_age: "18"}
+    components:
+      - {cell: min_age, text: "18", type: AGE_MIN, params: {min_age: 18}, safe_from: row}
+
+  - id: rule:AMH/Q0301/E1
+    review: SUPPORTED
+    decision: D5   # 'Grade 9' kept verbatim; 'pass' is not inferred. OV-005: grade 9 or higher passed -> satisfied; any other state -> UNKNOWN.
+    expect: {row_engine_use: SAFE_WITH_CONSTRAINT, row_text: "Grade 9 || No Experience required"}
+    components:
+      - {cell: academic, text: "Grade 9", type: SCHOOL_GRADE_MIN, params: {grade: 9, below_required_verdict: UNKNOWN}, safe_from: row}
+      - {cell: experience, text: "No Experience required", type: EXPERIENCE_MIN_YEARS, params: {years: 0.0}, safe_from: row}
+
+  - id: rule:AMH/Q0301/E2
+    review: SUPPORTED
+    expect: {row_engine_use: UNKNOWN, row_text: "Grade 8 pass and pursuing continuous schooling in regular school || No Experience required"}
+    components:
+      - {cell: academic, text: "Grade 8 pass and pursuing continuous schooling in regular school", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: ENROLMENT_NOT_MODELLED}
+      - {cell: experience, text: "No Experience required", type: EXPERIENCE_MIN_YEARS, params: {years: 0.0}, safe_from: cell, unknown_reason: UNCERTAIN_EXTRACTION}   # cell is PARSED_UNCERTAIN -> not evaluable
+
+  - id: rule:AMH/Q0301/E3
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "8th grade pass || 1 year relevant experience"}
+    components:
+      - {cell: academic, text: "8th grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 8}, safe_from: row}
+      - {cell: experience, text: "1 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q0301/E4
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "5th grade pass || 4 year relevant experience"}
+    components:
+      - {cell: academic, text: "5th grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 5}, safe_from: row}
+      - {cell: experience, text: "4 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 4.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q0301/E5
+    review: SUPPORTED   # P1.5-O1
+    review_note: "Literacy is UNMODELLED (Q-4 default). The experience part is 'parseable' per OV-009, but no cell carries a safe engine_use: ENGINE_USE_UNDECIDED. Audit review requested (P1.5-R1)."
+    expect: {row_engine_use: UNKNOWN, row_text: "Ability to read and write || 5 year relevant experience"}
+    components:
+      - {cell: academic, text: "Ability to read and write", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: LITERACY_NOT_MODELLED}
+      - {cell: experience, text: "5 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 5.0}, requires_relevance: true, safe_from: cell, unknown_reason: ENGINE_USE_UNDECIDED}   # TRANSCRIBED cell, engine_use UNKNOWN (OV-009 only says "parseable") -> safe = false (P1.5-O1)
+
+  - id: rule:AMH/Q0301/E6
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 2 || 6 months relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 2", type: PRIOR_NSQF_LEVEL, params: {level: 2.0}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "6 months relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 0.5}, requires_relevance: true, safe_from: row}   # 6 months = 0.5 years (OV-010 constraint)
+
+  - id: rule:AMH/Q0301/E7
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 1 || 1.5 years relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 1", type: PRIOR_NSQF_LEVEL, params: {level: 1.0}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "1.5 years relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.5}, requires_relevance: true, safe_from: row}
+
+  # ======================================================== AMH/Q2101  (Production Supervisor)
+  - id: rule:AMH/Q2101/AGE
+    review: SUPPORTED
+    expect: {row_engine_use: SAFE_HARD_RULE, min_age: "20"}
+    components:
+      - {cell: min_age, text: "20", type: AGE_MIN, params: {min_age: 20}, safe_from: row}
+
+  - id: rule:AMH/Q2101/E1
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "UG Diploma or equivalent || 1-year relevant experience"}
+    components:
+      - {cell: academic, text: "UG Diploma or equivalent", type: NAMED_CREDENTIAL, params: {credential: UG_DIPLOMA}, or_equivalent: true, safe_from: row}
+      - {cell: experience, text: "1-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q2101/E2
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "UG Certificate || 3-year relevant experience"}
+    components:
+      - {cell: academic, text: "UG Certificate", type: NAMED_CREDENTIAL, params: {credential: UG_CERTIFICATE}, safe_from: row}
+      - {cell: experience, text: "3-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 3.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q2101/E3
+    review: SUPPORTED   # P1.5-O4
+    review_note: "'12th or Equivalent' is SCHOOL_GRADE_MIN with or_equivalent (ARCHITECTURE 11.2; PostSchoolCredentialType has no 12th). Below the threshold stays UNKNOWN (Q-3 default)."
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "12th or Equivalent || 4-year relevant experience"}
+    components:
+      - {cell: academic, text: "12th or Equivalent", type: SCHOOL_GRADE_MIN, params: {grade: 12}, or_equivalent: true, safe_from: row}
+      - {cell: experience, text: "4-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 4.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q2101/E4
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 4 || 3-year relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 4", type: PRIOR_NSQF_LEVEL, params: {level: 4.0}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "3-year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 3.0}, requires_relevance: true, safe_from: row}
+
+  # ======================================================== AMH/Q2301  (Specialized Sewing Machine Operator)
+  - id: rule:AMH/Q2301/AGE
+    review: SUPPORTED
+    expect: {row_engine_use: SAFE_HARD_RULE, min_age: "18"}
+    components:
+      - {cell: min_age, text: "18", type: AGE_MIN, params: {min_age: 18}, safe_from: row}
+
+  - id: rule:AMH/Q2301/E1
+    review: SUPPORTED
+    decision: P1.5-D1
+    review_note: "Row is UNKNOWN. Only the experience cell is independently supported (geometry-confirmed, OV-001, SAFE_HARD_RULE); the academic cell is PARSED_UNCERTAIN, so the grade is typed but capped (UNCERTAIN_EXTRACTION). The row-level use is not raised."
+    expect: {row_engine_use: UNKNOWN, row_text: "11th Grade pass || No Experience required"}
+    components:
+      - {cell: academic, text: "11th Grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 11}, safe_from: cell, unknown_reason: UNCERTAIN_EXTRACTION}
+      - {cell: experience, text: "No Experience required", type: EXPERIENCE_MIN_YEARS, params: {years: 0.0}, safe_from: cell}
+
+  - id: rule:AMH/Q2301/E2
+    review: SUPPORTED
+    review_note: "Experience cell is empty in the extraction; OV-002 (pending, unapproved) proposes a value. Nothing is back-filled."
+    expect: {row_engine_use: UNKNOWN, row_text: "Completed 1st year of 3-year diploma after 10th. || "}
+    components:
+      - {cell: academic, text: "Completed 1st year of 3-year diploma after 10th.", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: DIPLOMA_YEAR_NOT_MODELLED}
+      - {cell: experience, text: "", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: OVERLAY_NOT_APPROVED}
+
+  - id: rule:AMH/Q2301/E3
+    review: SUPPORTED
+    review_note: "Experience cell empty; OV-003 pending, nothing back-filled."
+    expect: {row_engine_use: UNKNOWN, row_text: "10th grade pass and pursuing continuous schooling. || "}
+    components:
+      - {cell: academic, text: "10th grade pass and pursuing continuous schooling.", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: ENROLMENT_NOT_MODELLED}
+      - {cell: experience, text: "", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: OVERLAY_NOT_APPROVED}
+
+  - id: rule:AMH/Q2301/E4
+    review: SUPPORTED
+    review_note: "Experience cell empty; OV-004 pending, nothing back-filled."
+    expect: {row_engine_use: UNKNOWN, row_text: "8th grade pass with two years of NTC plus 1 year NAC/CITS || "}
+    components:
+      - {cell: academic, text: "8th grade pass with two years of NTC plus 1 year NAC/CITS", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: NTC_NAC_CITS_NOT_MODELLED}
+      - {cell: experience, text: "", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: OVERLAY_NOT_APPROVED}
+
+  - id: rule:AMH/Q2301/E5
+    review: SUPPORTED   # P1.5-O2 (experience capped; audit review requested, P1.5-R1)
+    decision: D4   # '10th Grade pass work' kept verbatim, flagged for review (OV-015)
+    expect: {row_engine_use: UNKNOWN, row_text: "10th Grade pass work || One year relevant Experience required"}
+    components:
+      - {cell: academic, text: "10th Grade pass work", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: REVIEW_FLAG}
+      - {cell: experience, text: "One year relevant Experience required", type: EXPERIENCE_MIN_YEARS, params: {years: 1.0}, requires_relevance: true, safe_from: cell, unknown_reason: UNCERTAIN_EXTRACTION}
+
+  - id: rule:AMH/Q2301/E6
+    review: SUPPORTED   # P1.5-O5
+    expect: {row_engine_use: UNKNOWN, row_text: "8th grade pass with two years of any combination of NTC/NAC/CITS or equivalent || One year relevant Experience required"}
+    components:
+      - {cell: academic, text: "8th grade pass with two years of any combination of NTC/NAC/CITS or equivalent", type: UNMODELLED, params: {}, safe_from: none, unknown_reason: NTC_NAC_CITS_NOT_MODELLED}   # "or equivalent" kept in the verbatim text; or_equivalent is false on UNMODELLED (P1.5-O5)
+      - {cell: experience, text: "One year relevant Experience required", type: EXPERIENCE_MIN_YEARS, params: {years: 1.0}, requires_relevance: true, safe_from: cell, unknown_reason: UNCERTAIN_EXTRACTION}
+
+  - id: rule:AMH/Q2301/E7
+    review: SUPPORTED
+    expect: {row_engine_use: CONDITIONAL_ON_DECLARED_RELEVANCE, row_text: "8th Grade pass || 3 year relevant experience"}
+    components:
+      - {cell: academic, text: "8th Grade pass", type: SCHOOL_GRADE_MIN, params: {grade: 8}, safe_from: row}
+      - {cell: experience, text: "3 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 3.0}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q2301/E8
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 3 || 1.5 year relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 3", type: PRIOR_NSQF_LEVEL, params: {level: 3.0}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "1.5 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 1.5}, requires_relevance: true, safe_from: row}
+
+  - id: rule:AMH/Q2301/E9
+    review: SUPPORTED
+    expect: {row_engine_use: "CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG", row_text: "Previous relevant Qualification of NSQF Level 2.5 || 3 year relevant experience"}
+    components:
+      - {cell: academic, text: "Previous relevant Qualification of NSQF Level 2.5", type: PRIOR_NSQF_LEVEL, params: {level: 2.5}, requires_relevance: true, safe_from: row}
+      - {cell: experience, text: "3 year relevant experience", type: EXPERIENCE_MIN_YEARS, params: {years: 3.0}, requires_relevance: true, safe_from: row}

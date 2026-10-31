@@ -46,6 +46,7 @@ def test_empty_approvals_change_nothing_and_flag_pending(tree):
     assert m["overlay_effects"]["OV-007"]["effect"] == "NO_RELATIONSHIP_ASSERTED"
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_approved_correction_is_field_level_only_and_linked_to_two_evidence_records(tree):
     r = tree.build(approve=["OV-002"])
     e2 = row(r, E2)
@@ -82,6 +83,7 @@ def test_approved_representation_records_a_group_and_replaces_nothing(tree):
     assert r.manifest["overlay_effects"]["OV-003"]["effect"] == "GROUP_RECORDED"
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_classification_matrix_never_raises_engine_use(tree):
     ids = ["OV-002", "OV-003"]
     for approve in ([], ["OV-002"], ["OV-003"], ids):
@@ -207,6 +209,7 @@ def test_unavailable_source_cannot_be_cited(tree):
         tree.build(approve=[])
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_all_official_evidence_has_source_sha_and_page(tree):
     r = tree.build(approve=["OV-002", "OV-003"])
     srcs = {s["id"]: s for s in load(r, "sources.json")}
@@ -229,14 +232,16 @@ def test_tampered_source_stops_the_build_before_any_output(tree):
     assert called == [] and tree.installed() == []
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_inputs_are_byte_identical_after_a_build(tree):
     tree.approved = ["OV-002", "OV-003"]
     tree.write()
     before = tree.snapshot()
-    build_mod.build(tree.settings(), approvals_path=tree.approvals, config_path=tree.config, out_root=tree.out)
+    build_mod.build(tree.settings(), approvals_path=tree.approvals, config_path=tree.config, rules_path=tree.rules, out_root=tree.out)
     assert tree.snapshot() == before
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_failure_leaves_no_partial_output_and_keeps_existing_builds(tree):
     ok = tree.build(approve=[])
     files = {p.name: p.read_bytes() for p in ok.path.iterdir()}
@@ -281,6 +286,7 @@ def test_same_id_with_different_content_is_refused(tree):
 # ---- reproducibility -----------------------------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_build_is_reproducible_and_inputs_change_the_id(tree, monkeypatch):
     from datetime import UTC, datetime
 
@@ -433,6 +439,7 @@ def test_dropped_or_gapped_overlay_rows_fail_cleanly(tree):
         t2.build(approve=[])
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_proposal_engine_use_never_reaches_output(tree):
     # a pending or approved correction that claims a SAFE use must not make its cell safe
     tree.overlay[1]["engine_use"] = "SAFE_HARD_RULE"
@@ -449,3 +456,38 @@ def test_substantiating_value_must_sit_in_the_same_merged_cell(tree):
     with pytest.raises(EvidenceError, match=r"OV-002: the value 'No Experience required' is not printed on the cited "
                                              r"source page, so the cited evidence cannot substantiate the correction"):
         tree.build(approve=["OV-002"])
+
+
+# ------------------------------------------------------------------------------------------ P1.5 Checkpoint C
+def test_c_the_eligibility_table_is_part_of_the_build_identity(tree):
+    a = tree.build(approve=[])
+    assert a.manifest["eligibility_rules_digest"]
+    assert load(a, "qualifications.json")[0]["eligibility"]["age_rule"]["raw_text"] == "Age: 18 years"
+    import yaml
+
+    table = yaml.safe_load(tree.rules_table())
+    table["rules"][0]["review_note"] = "changed"
+    tree.rules_text = yaml.safe_dump(table)
+    b = tree.build(approve=[])
+    assert b.data_build_id != a.data_build_id and b.manifest["eligibility_rules_digest"] != a.manifest["eligibility_rules_digest"]
+    assert a.path.is_dir() and (a.path / "build_manifest.json").is_file()  # the first build is still installed, unchanged
+
+
+def test_c_a_table_that_misses_a_row_fails_closed_and_installs_nothing(tree):
+    import yaml
+
+    table = yaml.safe_load(tree.rules_table())
+    table["rules"] = [r for r in table["rules"] if not r["id"].endswith("/E2")]
+    tree.rules_text = yaml.safe_dump(table)
+    with pytest.raises(BuildError, match="no mapping"):
+        tree.build(approve=[])
+    assert tree.installed() == []
+
+
+def test_c_an_approved_correction_on_an_eligibility_cell_fails_closed_under_a2(tree):
+    from skillgraph.curation.eligibility_rules import CorrectionNotSupported
+
+    ok = tree.build(approve=[])
+    with pytest.raises(CorrectionNotSupported, match="P1.5-A2"):
+        tree.build(approve=["OV-002"])
+    assert tree.installed() == [ok.data_build_id]  # nothing new, nothing partial

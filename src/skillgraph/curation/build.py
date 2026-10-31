@@ -47,6 +47,7 @@ from skillgraph.provenance.manifest import MANIFEST_NAME, OVERLAY_NAME, verify_s
 from skillgraph.settings import Settings
 
 from .config import CURATION_CODE_VERSION, DEFAULTS_PATH, CurationConfig, load_config
+from .eligibility_rules import RULES_PATH, assemble_specs, load_rules_config, rules_digest, structure_all
 from .errors import BuildError, EvidenceError
 from .catalogue_source import verify_catalogue
 from .evidence_book import EvidenceBook, SourceRegistry, page_numbers
@@ -365,7 +366,8 @@ class Builder:
             own = "min_age" if age else "raw_row_text"
             # Effective row-level use = the use of the row's own row-level component, never another field's overlay.
             cells = {fld: self.cell(f, r, fld) for fld in (
-                ("min_age",) if age else ("raw_academic_or_skill", "raw_required_experience", "raw_row_text"))}
+                # An age row also carries its verbatim printed line (P1.5-A1): a separate cell with its own evidence.
+                ("min_age", "raw_row_text") if age else ("raw_academic_or_skill", "raw_required_experience", "raw_row_text"))}
             row_use = cells[own].engine_use
             # The audit's wording for the row-level decision, verbatim (never interpreted, never raising row_use).
             wording = {c.row.engine_constraint for c in row_cls
@@ -394,7 +396,8 @@ class Builder:
                 age_cells[qp] = cell
                 out.append(self._source_row(qp, r, dict(
                     id=make_id(IdKind.RULE, f"{qp}/AGE"), qualification_id=qid, kind=SourceRowKind.AGE_9C,
-                    min_age=self.vd(cell, _int(cell.value, f"{qp} age")), extraction_status=rstatus,
+                    min_age=self.vd(cell, _int(cell.value, f"{qp} age")),
+                    raw_row_text=self.vd(cells["raw_row_text"], cells["raw_row_text"].value), extraction_status=rstatus,
                     engine_use=row_use, engine_constraint=constraint, overlay_ids=ids,
                     pending_overlay_ids=pend, audit_hints=hints, flags=flags, note=r["note"])))
                 continue
@@ -723,6 +726,7 @@ def build(
     *,
     approvals_path: Path | None = None,
     config_path: Path | None = None,
+    rules_path: Path | None = None,
     out_root: Path | None = None,
     now: datetime | None = None,
     hook: Hook | None = None,
@@ -731,6 +735,7 @@ def build(
     hook = hook or (lambda _stage: None)
     approvals_path = approvals_path or APPROVALS_PATH
     config_path = config_path or DEFAULTS_PATH
+    rules_path = rules_path or RULES_PATH
     raw_root = settings.data_path("raw_dir")
     extracted = settings.data_path("extracted_dir")
     audit = settings.data_path("audit_dir")
@@ -744,8 +749,10 @@ def build(
     manifest_csv, validation_json = raw_root / MANIFEST_NAME, raw_root / VALIDATION_NAME
 
     cfg, cfg_digest = load_config(config_path)
+    rules = load_rules_config(rules_path)  # raises EligibilityRulesError (a BuildError) on any invalid table
+    rules_sha = rules_digest(rules)
     guard_roots = [settings.data_root / "raw", settings.data_root / "processed", raw_root, extracted, audit, acquisition]
-    guard_files = [approvals_path, config_path]
+    guard_files = [approvals_path, config_path, rules_path]
     before = snapshot(guard_roots, guard_files)
 
     report = verify_sources(manifest_csv, raw_root, extracted, overlay_csv)  # raises SourceIntegrityError
@@ -843,9 +850,13 @@ def build(
                     b._flag(qp, QualityFlagCode.NCO_TITLE_NOT_FOUND, Severity.CAUTION,
                             f"NCO title for {o['nco_code']} was not found in the searched sources; none is shown.", [o["id"]])
 
+    # P1.5: structure every source row into components. Any inconsistency raises (fail closed): a stale table, a
+    # missing or ambiguous cell, an applied correction (A2), a missing age text, an unreasoned unsafe component.
+    eligibility = structure_eligibility(elig, rules, set(quals))
     qual_models: list[Qualification] = []
     try:
         for qp, data in quals.items():
+            data["eligibility"] = eligibility[qp]
             data["quality_flags"] = [f.model_dump(mode="json") for f in b.flags_by_qp[qp]]
             qual_models.append(Qualification.model_validate(data))
         for data in b.catalogue_only(set(cfg.pilot_qualifications), cfg.catalogue_source_item):
@@ -885,7 +896,8 @@ def build(
     sources_sha = {f.item_id: f.expected_sha256 for f in report.files if f.status == "MATCH"}
     approvals_digest = plan.approvals_digest
     ident = {"input_files": input_files, "source_files": sources_sha, "approvals_digest": approvals_digest,
-             "curation_code_version": CURATION_CODE_VERSION, "config_digest": cfg_digest}
+             "curation_code_version": CURATION_CODE_VERSION, "config_digest": cfg_digest,
+             "eligibility_rules_digest": rules_sha}
     build_id = "cb-" + hashlib.sha256(canonical_json(ident)).hexdigest()[:12]
     make_id(IdKind.CB, build_id[3:])
 
@@ -896,6 +908,7 @@ def build(
         "status": "READY", "data_build_id": build_id,
         "built_at": (now or datetime.now(UTC)).isoformat(timespec="seconds"),
         "curation_code_version": CURATION_CODE_VERSION, "config_digest": cfg_digest,
+        "eligibility_rules_digest": rules_sha,
         "inputs": {"raw_run_id": raw_root.name, "extraction_run_id": extracted.name, "overlay_audit_id": audit.name,
                    "approvals_digest": approvals_digest},
         "input_files": input_files, "source_files": sources_sha,
@@ -960,6 +973,18 @@ def build(
     except BaseException:
         shutil.rmtree(stage, ignore_errors=True)
         raise
+
+
+def structure_eligibility(elig: list[EligibilitySourceRow], rules, codes: set[str]) -> dict[str, dict]:
+    """The stored ``Qualification.eligibility`` of every curated qualification, as JSON-ready dicts (P1.5).
+
+    Fail closed: ``structure_all`` raises on any inconsistency (including an applied correction, P1.5-A2, and a missing
+    age text, P1.5-A1), and the specifications must cover exactly the curated qualifications, so a qualification is
+    never built without its rules and no rule is built for a qualification that is not curated."""
+    specs = assemble_specs(structure_all(elig, rules))
+    if set(specs) != codes:
+        raise BuildError(f"eligibility specifications do not match the curated qualifications: {sorted(set(specs) ^ codes)}")
+    return {code: spec.model_dump(mode="json") for code, spec in specs.items()}
 
 
 def check_references(outputs: dict[str, list]) -> None:

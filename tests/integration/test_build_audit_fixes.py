@@ -164,7 +164,7 @@ def test_tampered_a1_bytes_fail_source_integrity_before_the_content_check(tree):
     page.write_bytes(page.read_bytes().replace(b"Third Role", b"Third Rolf"))
     from skillgraph.curation import build as build_mod
     with pytest.raises(SourceIntegrityError):
-        build_mod.build(tree.settings(), approvals_path=tree.approvals, config_path=tree.config, out_root=tree.out)
+        build_mod.build(tree.settings(), approvals_path=tree.approvals, config_path=tree.config, rules_path=tree.rules, out_root=tree.out)
     assert tree.installed() == []
 
 
@@ -216,7 +216,7 @@ def test_row_level_use_ignores_a_field_level_decision_and_keeps_it_as_an_audit_h
 def test_a_decision_on_the_row_text_still_sets_the_row_level_use(tree):
     tree.elig[0]["extraction_status"] = "TRANSCRIBED"  # a substantiated row
     tree.overlay.append(ov("OV-008", f"{QP}|QF|eligibility_row|1", "raw_row_text", "INTERPRETATION_DECIDED",
-                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass | No Experience required"))
+                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass || No Experience required"))
     tree.curation["expected_overlay_rows"] = 8
     e1 = row(tree.build(approve=[]), E1)
     assert e1["engine_use"] == "CONDITIONAL_ON_DECLARED_RELEVANCE" == e1["raw_row_text"]["engine_use"]
@@ -227,7 +227,7 @@ def test_a_decision_on_the_row_text_still_sets_the_row_level_use(tree):
 def test_a_computing_decision_on_an_uncertain_row_text_fails_the_build(tree):
     # E1 is PARSED_UNCERTAIN: an overlay decision on its row text (or on the experience cell) cannot make it computing
     tree.overlay.append(ov("OV-008", f"{QP}|QF|eligibility_row|1", "raw_row_text", "INTERPRETATION_DECIDED",
-                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass | No Experience required"))
+                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass || No Experience required"))
     tree.curation["expected_overlay_rows"] = 8
     with pytest.raises(BuildError, match=rf"{QP}\|QF\|eligibility_row\|1: eligibility row refused: .*requires a substantiated row"):
         tree.build(approve=[])
@@ -246,6 +246,7 @@ def test_the_model_rejects_a_row_safer_than_its_component(tree, use):
         EligibilitySourceRow.model_validate(age)
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_no_row_is_safer_than_its_component_anywhere(tree):
     r = tree.build(approve=["OV-002"])
     for rw in load(r, "eligibility_source_rows.json"):
@@ -275,7 +276,7 @@ def test_constraints_are_carried_verbatim_and_never_alter_engine_use(tree):
     tree.elig[0]["extraction_status"] = "TRANSCRIBED"
     tree.overlay[0]["engine_constraint"] = "experience_years = 0"
     tree.overlay.append(ov("OV-008", f"{QP}|QF|eligibility_row|1", "raw_row_text", "INTERPRETATION_DECIDED",
-                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass | No Experience required"))
+                           "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass || No Experience required"))
     tree.overlay[-1]["engine_constraint"] = wording
     tree.curation["expected_overlay_rows"] = 8
     r = tree.build(approve=[])
@@ -291,7 +292,7 @@ def test_two_different_constraints_on_one_row_decision_are_refused(tree):
     tree.elig[0]["extraction_status"] = "TRANSCRIBED"
     for oid, text in (("OV-008", "one wording"), ("OV-009", "another wording")):
         tree.overlay.append(ov(oid, f"{QP}|QF|eligibility_row|1", "raw_row_text", "INTERPRETATION_DECIDED",
-                               "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass | No Experience required"))
+                               "CONDITIONAL_ON_DECLARED_RELEVANCE", src_val="11th Grade pass || No Experience required"))
         tree.overlay[-1]["engine_constraint"] = text
     tree.curation["expected_overlay_rows"] = 9
     with pytest.raises(BuildError, match="overlay rows give different engine_constraint texts"):
@@ -301,7 +302,7 @@ def test_two_different_constraints_on_one_row_decision_are_refused(tree):
 def test_safe_with_constraint_without_its_wording_fails_the_build(tree):
     tree.elig[0]["extraction_status"] = "TRANSCRIBED"
     tree.overlay.append(ov("OV-008", f"{QP}|QF|eligibility_row|1", "raw_row_text", "INTERPRETATION_DECIDED",
-                           "SAFE_WITH_CONSTRAINT", src_val="11th Grade pass | No Experience required"))
+                           "SAFE_WITH_CONSTRAINT", src_val="11th Grade pass || No Experience required"))
     tree.curation["expected_overlay_rows"] = 8
     with pytest.raises(BuildError, match="SAFE_WITH_CONSTRAINT requires the engine_constraint"):
         tree.build(approve=[])

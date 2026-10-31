@@ -15,7 +15,9 @@ from skillgraph.model.ids import DecisionRef, OverlayId, QualificationCode
 
 DEFAULTS_PATH = Path("config/curation_defaults.yaml")
 # Bumped by hand whenever curation logic changes in a way that can change the output (ARCHITECTURE §7 principle 4).
-CURATION_CODE_VERSION = "p1.4-3"
+# p1.5-1: Qualification.eligibility is now built from the structured eligibility rules (P1.5 Checkpoint C), and the
+# age rows carry their verbatim text (A1). The eligibility table digest is part of the build identity.
+CURATION_CODE_VERSION = "p1.5-1"
 
 _Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 

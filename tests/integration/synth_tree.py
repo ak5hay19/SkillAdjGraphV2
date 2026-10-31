@@ -100,6 +100,8 @@ class Tree:
         self.out = root / "out"
         self.approvals = root / "approvals.yaml"
         self.config = root / "curation.yaml"
+        self.rules = root / "eligibility_rules.yaml"
+        self.rules_text: str | None = None  # a test may replace the generated table
         self.manifest = [
             self.m("S1", SRC, PDF, "pdf", 20), self.m("S2", SRC2, PDF2, "pdf", 5),
             self.m("A1", "catalogue/page.html", b"placeholder", "html", None),
@@ -122,12 +124,12 @@ class Tree:
                           version="4.0", page="14")]
         self.elig = [
             src(row_type="eligibility_row", s_no="1", raw_academic_or_skill="11th Grade pass",
-                raw_required_experience="No Experience required", raw_row_text="11th Grade pass | No Experience required",
+                raw_required_experience="No Experience required", raw_row_text="11th Grade pass || No Experience required",
                 extraction_status="PARSED_UNCERTAIN", note="merged experience cell"),
             src(row_type="eligibility_row", s_no="2", raw_academic_or_skill="Completed 1st year of diploma",
-                raw_required_experience="", raw_row_text="Completed 1st year of diploma | ",
+                raw_required_experience="", raw_row_text="Completed 1st year of diploma || ",
                 extraction_status="PARSED_UNCERTAIN", note="experience cell empty"),
-            src(row_type="age_9c", min_age="18", page="4"),
+            src(row_type="age_9c", min_age="18", raw_row_text="Age: 18 years", page="4"),
         ]
         self.facts = [src(field="item5_version", value="4.0", extraction_status="PARSED_UNCERTAIN", page="3")]
         self.claims = [src(claim_no="1", claim_text_verbatim="Senior Operator(Vertical)", direction_label="Vertical", page="4")]
@@ -140,7 +142,7 @@ class Tree:
                file="qf_nos.csv", src_val="bridge=''; TST/N0001='4'",
                ov_val="credit_group: one value '4' for bridge + TST/N0001 combined", cat="CREDIT_GROUP", page="5"),
             ov("OV-004", f"{QP}|QF|eligibility_row|2", "raw_row_text", "UNRESOLVED", "UNKNOWN",
-               src_val="Completed 1st year of diploma | "),
+               src_val="Completed 1st year of diploma || "),
             ov("OV-005", f"{QP}|QF|age_9c", "min_age", "CONFIRMED_BY_GEOMETRY", "SAFE_HARD_RULE", src_val="18", page="4"),
             ov("OV-006", f"{QP}|QF|item5_version", "value", "PARSED_UNCERTAIN_RETAINED", "DISPLAY_ONLY", file="facts.csv",
                src_val="4.0", cat="REVIEW_FLAG"),
@@ -190,10 +192,47 @@ class Tree:
         _write(self.aud / "corrections_overlay.csv", OV_COLS, self.overlay)
         _write(self.acq / "approved_qualifications_parsed.csv", CAT_COLS, self.catalogue)
         self.config.write_text(yaml.safe_dump(self.curation), encoding="utf-8")
+        self.rules.write_text(self.rules_text if self.rules_text is not None else self.rules_table(), encoding="utf-8")
         self.approvals.write_text(yaml.safe_dump({"approved": [
             {"overlay_id": o, "approved_by": "test-fixture", "approved_on": "2026-01-01", "note": ""}
             for o in self.approved]}), encoding="utf-8")
         return self
+
+    def _engine_use(self, row: dict, key: str, field: str) -> str:
+        """The effective use of a source row's own cell, as the build derives it: a decided overlay row, else the default."""
+        decided = {o["engine_use"] for o in self.overlay if o["target_file"] == "eligibility_rows.csv"
+                   and o["target_row_key"] == key and o["target_field"] == field and not o["status"].startswith("PROPOSED_")}
+        if decided:
+            return sorted(decided)[0]
+        for d in self.curation.get("engine_use_defaults", []):
+            if d["file"] == "eligibility_rows.csv" and d["field"] == field:
+                return d["engine_use"]
+        return "UNKNOWN"
+
+    def rules_table(self) -> str:
+        """A synthetic eligibility table for the tree's own rows: every text cell UNMODELLED (nothing is interpreted),
+        the age row an AGE_MIN. It guards the same things the real table does (row text, use, printed age)."""
+        rules: list[dict] = []
+        for r in self.elig:
+            if r["doc_type"] != "QF" or r["qp_code"] != QP:
+                continue
+            if r["row_type"] == "age_9c":
+                key = f"{QP}|QF|age_9c"
+                rules.append({"id": f"rule:{QP}/AGE", "review": "SUPPORTED",
+                              "expect": {"row_engine_use": self._engine_use(r, key, "min_age"), "min_age": r["min_age"]},
+                              "components": [{"cell": "min_age", "text": r["min_age"], "type": "AGE_MIN",
+                                              "params": {"min_age": int(r["min_age"])}, "safe_from": "row",
+                                              "unknown_reason": "REVIEW_FLAG"}]})
+                continue
+            key = f"{QP}|QF|eligibility_row|{r['s_no']}"
+            rules.append({"id": f"rule:{QP}/E{r['s_no']}", "review": "SUPPORTED",
+                          "expect": {"row_engine_use": self._engine_use(r, key, "raw_row_text"), "row_text": r["raw_row_text"]},
+                          "components": [{"cell": cell, "text": r[col], "type": "UNMODELLED", "params": {},
+                                          "safe_from": "none", "unknown_reason": "REVIEW_FLAG"}
+                                         for cell, col in (("academic", "raw_academic_or_skill"),
+                                                           ("experience", "raw_required_experience"))]})
+        unique = list({rule["id"]: rule for rule in reversed(rules)}.values())[::-1]  # a duplicated row maps once
+        return yaml.safe_dump({"rules": unique})
 
     def settings(self):
         return load_settings(REPO / "config" / "default.yaml", self.data, environ={})
@@ -202,7 +241,8 @@ class Tree:
         if approve is not None:
             self.approved = approve
         self.write()
-        return build(self.settings(), approvals_path=self.approvals, config_path=self.config, out_root=self.out, **kw)
+        return build(self.settings(), approvals_path=self.approvals, config_path=self.config, rules_path=self.rules,
+                     out_root=self.out, **kw)
 
     def snapshot(self) -> dict[str, str]:
         files = [p for p in self.root.rglob("*") if p.is_file() and self.out not in p.parents]

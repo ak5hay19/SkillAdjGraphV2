@@ -32,3 +32,16 @@ def repo_data() -> Path:
     if not path.is_dir():
         pytest.skip(f"repository data tree not found: {path}")
     return path
+
+
+@pytest.fixture
+def p14_only(monkeypatch):
+    """Build without structuring the eligibility rules (``Qualification.eligibility`` stays empty).
+
+    For the P1.4 tests that exercise overlay mechanics which the structuring layer deliberately refuses (an applied
+    correction on an eligibility cell is fail-closed under P1.5-A2). Production has no such switch: the stub replaces
+    the module function only inside a test.
+    """
+    from skillgraph.curation import build as build_mod
+
+    monkeypatch.setattr(build_mod, "structure_eligibility", lambda elig, rules, codes: dict.fromkeys(codes))

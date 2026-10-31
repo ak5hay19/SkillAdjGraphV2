@@ -105,7 +105,7 @@ All non-2xx responses use this shape:
 | `EngineUse` (from the audit overlay) | `SAFE_HARD_RULE`, `SAFE_WITH_CONSTRAINT`, `SAFE_HOURS`, `CONDITIONAL_ON_DECLARED_RELEVANCE`, `CONDITIONAL_ON_DECLARED_RELEVANCE+LEVEL_CONFIG`, `UNKNOWN`, `DISPLAY_ONLY`, `NOT_USED` |
 | `Coverage` | `CURATED`, `CATALOGUE_ONLY` |
 | `ComponentType` | `AGE_MIN`, `SCHOOL_GRADE_MIN`, `NAMED_CREDENTIAL`, `PRIOR_NSQF_LEVEL`, `EXPERIENCE_MIN_YEARS`, `UNMODELLED` |
-| `UnknownReasonCode` | `INPUT_NOT_DECLARED`, `RELEVANCE_NOT_DECLARED`, `CONFIG_UNSET`, `EQUIVALENCE_UNDEFINED`, `CREDENTIAL_ORDER_UNDEFINED`, `ENROLMENT_NOT_MODELLED`, `LITERACY_NOT_MODELLED`, `NTC_NAC_CITS_NOT_MODELLED`, `DIPLOMA_YEAR_NOT_MODELLED`, `REVIEW_FLAG`, `UNCERTAIN_EXTRACTION`, `SOURCE_CONFLICT`, `OVERLAY_NOT_APPROVED` |
+| `UnknownReasonCode` | `INPUT_NOT_DECLARED`, `RELEVANCE_NOT_DECLARED`, `CONFIG_UNSET`, `EQUIVALENCE_UNDEFINED`, `CREDENTIAL_ORDER_UNDEFINED`, `ENROLMENT_NOT_MODELLED`, `LITERACY_NOT_MODELLED`, `NTC_NAC_CITS_NOT_MODELLED`, `DIPLOMA_YEAR_NOT_MODELLED`, `REVIEW_FLAG`, `UNCERTAIN_EXTRACTION`, `SOURCE_CONFLICT`, `OVERLAY_NOT_APPROVED`, `ENGINE_USE_UNDECIDED` |
 | `ConditionKind` | `DECLARATION`, `CONFIG`, `HYPOTHETICAL` |
 | `QualityFlagCode` | `UNCERTAIN_EXTRACTION`, `SOURCE_CONFLICT`, `SOURCE_UNAVAILABLE`, `NCO_TITLE_NOT_FOUND`, `TITLE_VARIANT`, `SECONDARY_COPY_BINARY_DIFFERS`, `OVERLAY_PENDING_APPROVAL`, `NUMBERING_GAP`, `SEMANTIC_AMBIGUITY`, `INFERENCE_EXPERIMENTAL`, `HYPOTHETICAL_SCENARIO`, `LICENCE_UNCONFIRMED`, `NO_OFFICIAL_REDUCTION_SOURCE`, `DEPENDS_ON_DECLARATION`, `DEPENDS_ON_CONFIG`, `SMALL_SAMPLE`, `UNCERTAINTY_NOT_ESTIMABLE`, `AGGREGATION_CONTEXT_ONLY` |
 | `Severity` | `INFO`, `CAUTION`, `WARNING` |
@@ -120,6 +120,13 @@ All non-2xx responses use this shape:
 | `BuildStatus` | `READY`, `NOT_BUILT`, `INVALID` |
 | `GateDecision` | `GO`, `GO_REDUCED`, `NO_GO`, `NOT_ASSESSED` |
 | `ModuleStatus` | `AVAILABLE`, `DEFERRED`, `NOT_ASSESSED` |
+
+**`UnknownReasonCode` meanings that the name alone does not give:**
+
+- `UNCERTAIN_EXTRACTION`: the input cell is `PARSED_UNCERTAIN` or `UNRESOLVED` and has not been substantiated. It is never used for a `TRANSCRIBED` cell.
+- `OVERLAY_NOT_APPROVED`: the value exists only as a pending, unapproved overlay proposal.
+- `ENGINE_USE_UNDECIDED`: the requirement was parsed from a cell that is not uncertain, but its `engine_use` is `UNKNOWN`: the audit assigned it no safe use and nothing substantiates evaluating it (for example the 5-year experience of Sewing Machine Operator row 5). The component keeps its verbatim requirement and is not safe. It is resolved only by a new audit decision on that cell, never by code or configuration. `resolvable_by` is `SOURCE_REVIEW`.
+- `REVIEW_FLAG`: the audit flagged the verbatim text for review (decision D4).
 
 ### 2.2 Provenance and quality objects
 
@@ -193,8 +200,8 @@ The profile is never stored or logged. Only its SHA-256 digest is logged.
 ComponentResult {
   component_id: string                 // "rule:AMH/Q2301/E9#c1"
   type: ComponentType
-  requirement_text: string             // human form of the structured requirement
-  params: object                       // e.g. {"level": 2.5, "requires_relevance": true}
+  requirement_text: string             // verbatim text of the component's own source cell (canonical; see the component conventions below)
+  params: object                       // stored params + "requires_relevance": true when the stored field is true (see the component conventions below)
   verdict: Verdict
   inputs_used: [{ field: string, value: any, evidence_class: "DECLARED"|"CONFIG"|"OFFICIAL"|"HYPOTHETICAL" }]
   evidence_ids: string[]
@@ -203,11 +210,36 @@ ComponentResult {
 }
 Condition     { kind: ConditionKind, key: string, value: any, evidence_class: EvidenceClass, text: string }
 UnknownReason { code: UnknownReasonCode, ref: string, text: string, resolvable_by: "PROFILE"|"CONFIG"|"SOURCE_REVIEW"|"NOT_RESOLVABLE_FROM_CURRENT_SOURCES" }
+```
+
+**Component conventions (curated rules, ARCHITECTURE §9.2, §11.2):**
+
+- **Order and identifier.** Components follow the printed cell order (academic or skill cell first, then the experience cell), one component per cell. `component_id` is `<rule id>#c<n>` with n counting from 1; the age rule has the single component `#c1`. `component_id` and `requirement_text` are derived, not stored.
+- **`requirement_text`.** The canonical input is the verbatim text of the component's own cell (the matching part of the rule's `raw_text`). Normalised presentation text may be derived from `type` and `params`, but it never replaces the source wording: for an `UNMODELLED` component, and for a component capped by `UNCERTAIN_EXTRACTION`, `ENGINE_USE_UNDECIDED` or `OVERLAY_NOT_APPROVED`, `requirement_text` is the verbatim cell text. The examples below may paraphrase for readability; they are illustrative.
+- **`params` by `type`:**
+
+  | `type` | `params` | Types |
+  |---|---|---|
+  | `AGE_MIN` | `min_age` | integer |
+  | `SCHOOL_GRADE_MIN` | `grade`; optional `below_required_verdict` | `grade` integer 0–12; `below_required_verdict` is only `"UNKNOWN"` |
+  | `NAMED_CREDENTIAL` | `credential` | a `PostSchoolCredentialType` value (`UG_CERTIFICATE`, `UG_DIPLOMA`) |
+  | `PRIOR_NSQF_LEVEL` | `level` | number (stored as a float, for example `3.0`, `2.5`) |
+  | `EXPERIENCE_MIN_YEARS` | `years` | number (stored as a float, for example `3.0`, `0.5`) |
+  | `UNMODELLED` | none | `{}` |
+
+- **`below_required_verdict`.** `grade` is the threshold. `below_required_verdict` names the verdict returned when the declared grade is *below* that threshold; it never changes which grades satisfy the requirement. It is absent for every row except Sewing Machine Operator row 1 ("Grade 9", decision D5, OV-005), where it is `"UNKNOWN"`. When absent, the ARCHITECTURE §11.2 rule applies (below the threshold → `NOT_MET`). No other value is defined.
+- **`requires_relevance` (stored field, response projection).** The stored `Component` keeps `requires_relevance` as its own boolean field; the stored `params` never contain that key (a stored key would collide with the projection). The response views (`ComponentResult.params`, `RuleView.components[].params`) have no separate `requires_relevance` field, so the API contract projects it: the response `params` equal the stored `params` plus `"requires_relevance": true` when the stored field is true, and the key is omitted when it is false (as in the `AGE_MIN` and `UNMODELLED` examples). The examples with `"requires_relevance": true` inside `params` are this projection, not the stored shape. The model shape is unchanged.
+- **`or_equivalent`.** Stored as a component field and not projected: no response view exposes it today (whether the UI needs it is a P5 question, not decided here). It changes evaluation only for `NAMED_CREDENTIAL` and `SCHOOL_GRADE_MIN` (Q-3: below the threshold or credential not held → `UNKNOWN` with `EQUIVALENCE_UNDEFINED`, never `NOT_MET`). On an `UNMODELLED` component it has no evaluation effect and does not imply that equivalence is supported (the curated data does not set it there).
+- **`safe` and `unknown_reason` (stored).** `safe` says whether the engine may compute the component from a profile. The stored `unknown_reason` is the static cause when it may not. They are distinct, but in curated data `safe = false` implies a non-null `unknown_reason`, and `safe = true` implies a null one (ARCHITECTURE §9.2). The response `ComponentResult.unknown_reason` is a different, per-evaluation value: it is null whenever the verdict is not `UNKNOWN`, and dynamic causes (`INPUT_NOT_DECLARED`, `RELEVANCE_NOT_DECLARED`, `CONFIG_UNSET`, `CREDENTIAL_ORDER_UNDEFINED`, `EQUIVALENCE_UNDEFINED`) are never stored.
+- **Static projection of a stored rule.** The fields of `RowResult` and `ComponentResult` that do not depend on a profile are projected from the stored rule by `project_rule` / `project_spec` (`src/skillgraph/curation/eligibility_rules.py`), in the response order: the age rule, then the rows by ascending `s_no`. A rule gives `rule_id`, `raw_text`, `engine_use`, `overlay_ids`, `flags` (a copy of the stored rule's flags; the age rule has the same keys) and, for an eligibility row only, `s_no`, plus `components`. A component gives `component_id` (`<rule id>#c<n>`), `type`, `requirement_text`, `params` (with `requires_relevance: true` only when the stored field is true) and `evidence_ids` (the one evidence record of the component's own cell). `requirement_text` is the verbatim text of the component's own cell (for the age rule, its whole `raw_text`); it is derived, never stored, and never paraphrased. Not projected: `safe`, `or_equivalent`, the stored `unknown_reason` and a component's own `engine_use`. `verdict`, `inputs_used`, `condition` and the per-evaluation `unknown_reason` come from the evaluation (P3), not from the stored rule.
+- **`overlay_ids`.** On a rule or row, `overlay_ids` lists only decided overlay rows (applied or interpretation decisions). A pending, unapproved proposal is not listed there; it appears only in the `refs` of the `OVERLAY_PENDING_APPROVAL` flag.
+
+```text
 
 RowResult {
   rule_id: string, s_no: integer, raw_text: string,        // verbatim official row text
-  engine_use: EngineUse, overlay_ids: string[],
-  verdict: Verdict, components: ComponentResult[], flags: QualityFlag[]
+  engine_use: EngineUse, overlay_ids: string[],            // decided overlay rows only; pending proposals appear in flags[].refs
+  verdict: Verdict, components: ComponentResult[], flags: QualityFlag[]   // flags: the stored rule's quality flags (e.g. UNCERTAIN_EXTRACTION, OVERLAY_PENDING_APPROVAL)
 }
 
 EligibilityResult {
@@ -582,9 +614,9 @@ labour_market {
             "unknown_reason": null } ],
         "flags": [] },
       { "rule_id": "rule:AMH/Q2301/E2", "s_no": 2, "raw_text": "Completed 1st year of 3-year diploma after 10th. || ",
-        "engine_use": "UNKNOWN", "overlay_ids": ["OV-002", "OV-012"], "verdict": "UNKNOWN",
+        "engine_use": "UNKNOWN", "overlay_ids": ["OV-012"], "verdict": "UNKNOWN",
         "components": [
-          { "component_id": "rule:AMH/Q2301/E2#c1", "type": "UNMODELLED", "requirement_text": "Completed 1st year of a 3-year diploma after 10th",
+          { "component_id": "rule:AMH/Q2301/E2#c1", "type": "UNMODELLED", "requirement_text": "Completed 1st year of 3-year diploma after 10th.",
             "params": {}, "verdict": "UNKNOWN", "inputs_used": [], "evidence_ids": ["ev:…"], "condition": null,
             "unknown_reason": { "code": "DIPLOMA_YEAR_NOT_MODELLED", "ref": "rule:AMH/Q2301/E2#c1",
                                 "text": "Diploma-year routes are not modelled in profiles.", "resolvable_by": "SOURCE_REVIEW" } } ],

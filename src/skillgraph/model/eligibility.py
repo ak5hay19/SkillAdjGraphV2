@@ -55,6 +55,9 @@ class UnknownReasonCode(StrEnum):
     UNCERTAIN_EXTRACTION = "UNCERTAIN_EXTRACTION"
     SOURCE_CONFLICT = "SOURCE_CONFLICT"
     OVERLAY_NOT_APPROVED = "OVERLAY_NOT_APPROVED"
+    # A parsed requirement (the cell is not uncertain) whose engine_use is UNKNOWN: the audit has assigned it no
+    # safe use and nothing else substantiates evaluating it. Resolved only by a new audit decision on that cell.
+    ENGINE_USE_UNDECIDED = "ENGINE_USE_UNDECIDED"
 
 
 # Parameters that ARCHITECTURE §11.2 and API_SPEC name for a component type. Other keys are not restricted here.

@@ -39,7 +39,7 @@ def run(out: Path, approve: list[str] = (), tmp: Path | None = None):
             {"overlay_id": o, "approved_by": "test-fixture", "approved_on": "2026-01-01", "note": ""} for o in approve]}),
             encoding="utf-8")
     return build(load_settings(REPO / "config" / "default.yaml", DATA, environ={}), approvals_path=path,
-                 config_path=REPO / DEFAULTS_PATH, out_root=out)
+                 config_path=REPO / DEFAULTS_PATH, rules_path=REPO / "config" / "eligibility_rules.yaml", out_root=out)
 
 
 def tree_hashes() -> dict[str, str]:
@@ -277,6 +277,7 @@ def test_no_pii_in_curated_output(built):
             assert not rx.search(content), f"{p.name}: {rx.pattern}"
 
 
+@pytest.mark.usefixtures("p14_only")  # an applied correction on an eligibility cell is fail-closed under P1.5-A2
 def test_hypothetical_approval_of_ov002_and_ov034_in_memory_only(tmp_path):
     before = tree_hashes()
     r = run(tmp_path / "o", ["OV-002", "OV-034"], tmp_path)
@@ -303,6 +304,7 @@ def test_hypothetical_approval_of_ov002_and_ov034_in_memory_only(tmp_path):
     assert ssmo["credit_groups"] == []  # OV-035 is still pending
 
 
+@pytest.mark.usefixtures("p14_only")
 def test_approving_all_three_corrections_and_both_groups(tmp_path):
     r = run(tmp_path / "o", ["OV-002", "OV-003", "OV-004", "OV-034", "OV-035"], tmp_path)
     assert r.manifest["overlays"]["pending"] == [] and len(r.manifest["overlays"]["applied"]) == 5
