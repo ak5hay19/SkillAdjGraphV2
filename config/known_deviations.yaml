@@ -1,0 +1,47 @@
+# Known-deviations register (TASKS P1.6; ARCHITECTURE section 18).
+# One entry per source discrepancy that a validation check would otherwise report. Nothing here is accepted or waived:
+# every entry is UNRESOLVED. `observed` must equal the values the check finds, exactly (no tolerance).
+#   - a discrepancy that is not registered                  -> the validation check fails
+#   - a registered discrepancy whose values differ           -> the validation check fails
+#   - a registered discrepancy that no longer occurs         -> the validation check fails
+#     ("resolution review required: follow the baseline document section 5")
+# Editing `observed` to make a check pass is a resolution decision, not a test fix.
+
+deviations:
+  - id: KD-001
+    finding: DQ-01
+    check: qf_nos_credit_sum_vs_item10
+    subject: AMH/Q2301
+    observed: {row_sum: 12, item10: 14, totals_row: 14, qf_N2302: 3, qp_N2302: 5}
+    evidence:
+      overlays: [OV-035, OV-036, OV-037, OV-038, OV-039]
+      source_item: A5            # SSMO QF: NOS table p.5-6, item 10 p.4; QP (A4) p.14 for N2302
+      doc: "docs/baselines/legacy_tests_2026-10-31.md#2-the-source-discrepancy"
+    status: UNRESOLVED
+    resolution_criteria: "docs/baselines/legacy_tests_2026-10-31.md#5-resolution-criteria-for-dq-01"
+
+  # The QF-vs-QP credit disagreement for one NOS is its own validation check, so it is registered on its own.
+  # It is the second part of DQ-01 (the first entry carries the same two values as context).
+  - id: KD-002
+    finding: DQ-01
+    check: nos_credits_qf_vs_qp
+    subject: "AMH/Q2301 AMH/N2302"
+    observed: {qf: 3, qp: 5}
+    evidence:
+      overlays: [OV-036, OV-037]
+      source_item: A5
+      doc: "docs/baselines/legacy_tests_2026-10-31.md#2-the-source-discrepancy"
+    status: UNRESOLVED
+    resolution_criteria: "docs/baselines/legacy_tests_2026-10-31.md#5-resolution-criteria-for-dq-01"
+
+  - id: KD-003
+    finding: DQ-02
+    check: nos_level_qf_vs_qp
+    subject: "AMH/Q2301 DGT/VSQ/N0102"
+    observed: {qf: 3.5, qp: 4}
+    evidence:
+      overlays: [OV-040]
+      source_item: A5
+      doc: "ARCHITECTURE.md section 8.6 DQ-02"
+    status: UNRESOLVED
+    resolution_criteria: "ARCHITECTURE.md section 8.6 DQ-02: the QF/QP level for DGT/VSQ/N0102 needs a source-backed decision; none is selected"

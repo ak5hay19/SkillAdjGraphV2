@@ -36,6 +36,6 @@ def test_help_lists_every_command():
 
 
 def test_module_entry_exit_code():
-    out = subprocess.run([sys.executable, "-m", "skillgraph", "validate"], capture_output=True, text=True)
+    out = subprocess.run([sys.executable, "-m", "skillgraph", "serve"], capture_output=True, text=True)
     assert out.returncode == 2
-    assert "P1.6" in out.stderr
+    assert "P5.1" in out.stderr
