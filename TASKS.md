@@ -1,6 +1,6 @@
 # Skill Adjacency Graph — Implementation Plan (TASKS)
 
-**Document status:** Approved baseline, 2026-10-31. Phase 0 is complete (P0.1–P0.5 DONE: `fbdc28f`, `63a83dd`, `33ac1cc`). Phase 1 is implemented through **P1.6** in the working tree and engineering-accepted (2026-10-31) with the unresolved evidence items documented as exceptions; it is uncommitted and no stage is marked DONE. Phase 1 closure status and the open decisions are in the **Phase 1 closure assessment** below (after P1.6).
+**Document status:** Approved baseline, 2026-10-31. Phase 0 is complete (P0.1–P0.5 DONE: `fbdc28f`, `63a83dd`, `33ac1cc`). Phase 1 (P1.1–P1.6) is **engineering accepted with documented exceptions** and committed; P1.1–P1.6 are marked DONE as engineering stages (`1a1e843`, `771675e`, `4c18e0d`, `abcdd27`, `7f43f66`, `2a65abd`). Phase 1 is **not declared complete**: DQ-01/02/03, Q-2, A2, P1.5-R1 and the other evidence gates remain open. Phase 1 closure status and the open decisions are in the **Phase 1 closure assessment** below (after P1.6).
 **Authority:** this document is authoritative for task order, status and acceptance criteria. The other documents:
 
 - design: [`ARCHITECTURE.md`](ARCHITECTURE.md);
@@ -205,7 +205,9 @@ P0 ──► P1 ──► P3 ──┬──► P4 ──┐
 
 No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/processed/extracted_2026-10-30/` and `data/processed/audit_2026-10-30_m1s1/`, and writes only under `data/curated/`.
 
-### P1.1 — Source integrity verifier · MUST
+### P1.1 — Source integrity verifier · MUST · DONE (1a1e843)
+
+- **DONE (2026-10-31, engineering acceptance):** all four acceptance criteria met; integrity is checked before every build (`build` calls `verify_sources`). DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** prove the evidence base is the one that was audited.
 - **Dependencies:** P0.4.
@@ -227,7 +229,9 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   - Exit codes: 0 verified, 1 `SourceIntegrityError` (the full report is still printed on stdout), 3 settings or configuration error (`SettingsError`, invalid values, unreadable file; no traceback, empty stdout).
   - `tests/integration/test_integrity.py`: 35 tests, synthetic trees in temporary directories (including the one-altered-byte case); the two real-data tests skip when `data/` is absent. Full suite: 86 passed. Legacy baseline: MATCH, 23 passed, 1 failed (DQ-01 unresolved), not a passing suite.
 
-### P1.2 — Source-of-truth schemas · MUST
+### P1.2 — Source-of-truth schemas · MUST · DONE (771675e)
+
+- **DONE (2026-10-31, engineering acceptance):** all five acceptance criteria met and enforced by `tests/unit/test_model_*.py`; `docs/schemas.md` is checked by `tools/gen_schema_docs.py --check`. DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** Pydantic models for ARCHITECTURE §9.2, with the identifier rules of §9.1.
 - **Dependencies:** P0.3.
@@ -248,7 +252,9 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   - Remaining limitations (audit N2–N4): (N2) an `OFFICIAL` value need not carry an `engine_use`, and `value_status = UNRESOLVED` may hold a non-null value; both are left to P1.4/P1.6 checks. (N3) models are only shallowly immutable: fields cannot be reassigned, but lists and dicts inside them (`params`, `quality_flags`) can still be mutated in place. (N4) an unparametrised `Valued` accepts any value type; no model uses it bare. The slug-collision check is a safety net: strict ID grammars make a natural collision impossible, so the test forces one with an explicit slug.
   - **DQ-03 remains unresolved for a deliberate P1.4 decision.** §9.1 derives a conflict ID from an overlay ID and the DQ-03 lead has no overlay row, so `Conflict` cannot represent `UNRESOLVED_LEAD_SOURCE_UNAVAILABLE` without a new ID convention or a borrowed overlay ID (which would be fabricated provenance). Neither was introduced.
 
-### P1.3 — Overlay approval mechanism · MUST
+### P1.3 — Overlay approval mechanism · MUST · DONE (4c18e0d, abcdd27)
+
+- **DONE (2026-10-31, engineering acceptance):** mechanism criteria met in `4c18e0d`; the three "after a build" criteria were verified once `build` existed (`abcdd27`). `config/overlay_approvals.yaml` remains `approved: []`; OV-002…004 and OV-034/035 stay pending. DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** apply audit proposals only with your explicit approval (Q-2).
 - **Dependencies:** P1.2.
@@ -268,7 +274,9 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   - Decisions beyond the text (the specification does not say): an approval of a row that is not `PROPOSED_*` is an error; an unknown `status` or `engine_use` is an error; a missing or non-list approvals file is an error rather than "nothing approved"; an overlay `source_value` that differs from the extraction value is a "stale overlay" error; an approved `PROPOSED_REPRESENTATION` (OV-034/035) is classified `APPLY` but replaces no value. The mapping of the other statuses to `INTERPRET`/`DISPLAY`/`IGNORE` is the module's reading of AUDIT_NOTE §4 (table in the module docstring); `engine_use` still governs engine behaviour (§11.4).
   - Q-2 stays open. DQ-01 and DQ-03 are untouched.
 
-### P1.4 — Curated build · MUST
+### P1.4 — Curated build · MUST · DONE (abcdd27, 7f43f66, 2a65abd)
+
+- **DONE (2026-10-31, engineering acceptance):** all criteria met; the definition of done (rely on `data/curated/` alone) is met now that P1.5 and P1.6 exist. Documented exceptions remain: `VALIDATION.json` is hashed but has no expected hash, and the QP title alias is not PDF-checked (closure item D1). DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** a deterministic, evidence-linked dataset (ARCHITECTURE §7 and §9).
 - **Dependencies:** P1.1, P1.2, P1.3.
@@ -306,7 +314,9 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   - **Audit fixes (second review, 2026-10-31).** **L10:** every `CONFIRMED_BY_GEOMETRY`/`CORROBORATED` upgrade now passes `_overlay_source()` (same source as the row, cited page within the row's page and the document, non-empty location and method), a second upgrade row on one cell fails, and the cell's evidence is a separate record carrying the overlay's own method, location and page (`Builder._upgrade_evidence`); a `source_value` that differs from the extraction is rejected earlier by `check_source_value` (`TargetError`). **M5:** `curation/catalogue_source.py` re-parses A1's HTML table (stdlib) and the build fails (`BuildError`) unless all 37 catalogue rows agree with it on S.No., name, code, NQR, version, level, hours, credits and CCN (whitespace-collapse only; an en dash is compared as an en dash); the CSV moves from `unverified_inputs` to `verified_derived_inputs`, and catalogue evidence uses method `html_table_parse_verified`. The QP-title alias cannot be checked against the PDF (no PDF reader is a project dependency), so it no longer has an OFFICIAL evidence record: `titles.qp` is kept with a `TITLE_VARIANT` CAUTION flag (`refs=["src:B1"]`) that says it is not independently verified; the build also requires `VALIDATION.json`'s B1 file hash to equal the manifest's. The S.No. 27 en dash is in A1 itself and is no longer called an encoding artifact. **M2:** the effective row-level `engine_use` is the use of the row's own component (`raw_row_text`, or `min_age` for the age row), enforced by the `EligibilitySourceRow` model (a safe row use requires the same use on that component); a decision the overlay states about another field (OV-001's experience cell) is kept in `audit_hints` and authorizes nothing. Q2301/E1 is now `UNKNOWN`; its experience cell stays `SAFE_HARD_RULE` and no other row changed. Rows are not capped by their academic/experience cells: the audit's explicit row-level decisions on `raw_row_text` (20 rows) are kept. **M3:** OV-033 is recorded only (generated claims always have `resolved_target = null` and are `DISPLAY_ONLY` per ARCHITECTURE sections 9.2 and 11; the overlay's `NOT_USED` describes the absent relationship, not the claim text); the always-passing guard was removed. Earlier-round fixes (proposal `engine_use` never reaches output, contiguous OV-001..052, merged-cell substantiation, unmatched conflict targets, credit groups only for approved `PROPOSED_REPRESENTATION`) remain. `CURATION_CODE_VERSION` is `p1.4-2`; the real build is `cb-0e76c97bea00` (older `cb-4ff16acc3b27` (`p1.4-1`) and `cb-744256fa29dc` (`p1.4-2`) may remain in the ignored `data/curated/`). **Still open:** the QP title alias and the NCO titles rest on `VALIDATION.json`, which has no expected hash (NCO titles are cross-checked against the DGE HTML; the alias is not checked against the PDF); catalogue/alias evidence has a `location`, not a `page`; seven evidence records (six CORROBORATED Q2101 totals) are validated but referenced by no curated field.
   - **Verification (2026-10-31):** full suite 654 passed; `verify-sources` exit 0 (18 of 18 local files matched, 4 `NO_LOCAL_FILE`); `tools/gen_schema_docs.py --check` exit 0; `pip check` no broken requirements; legacy baseline `MATCH`, 23 passed, 1 failed, DQ-01 unresolved. This is not a passing suite. `config/overlay_approvals.yaml` is still `approved: []`.
 
-### P1.5 — Eligibility rule structuring and human review file · MUST
+### P1.5 — Eligibility rule structuring and human review file · MUST · DONE (7f43f66, 2a65abd)
+
+- **DONE (2026-10-31, engineering acceptance):** acceptance criteria met by the committed work; the one-time review took place and C-4 was ruled with its limitation. Documented exceptions remain open and unresolved: A2 (Q-2), P1.5-R1, Q0301/E5 `ENGINE_USE_UNDECIDED`, Q2301/E1#c1 (closure items E5–E8). DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** translate the 24 eligibility rows and 4 age rows into structured components (ARCHITECTURE §11.2), strictly following the overlay's `engine_use` and `engine_constraint` and decisions D2–D5.
 - **Dependencies:** P1.4; Q-3 and Q-4 (defaults apply if undecided).
@@ -371,7 +381,9 @@ No acquisition is repeated. Everything reads `data/raw/2026-10-30/`, `data/proce
   7. *Baselines.* Existing builds under `data/curated/` are not rewritten; `tools/check_legacy_baseline.py` must still report MATCH, 23 passed, 1 failed (DQ-01 unresolved); this is a documented baseline, not a passing suite.
   8. *Stays blocked.* Installing the A1 build (the version bump); applied corrections on A2; the four cells of P1.5-R1 stay capped; DQ-01 and DQ-03 untouched.
 
-### P1.6 — Validation report, known-findings register and known-deviations tests · MUST
+### P1.6 — Validation report, known-findings register and known-deviations tests · MUST · DONE (2a65abd)
+
+- **DONE (2026-10-31, engineering acceptance):** acceptance criteria met by the committed work. Documented exceptions: DQ-10 and DQ-13 are `NOT_MACHINE_CHECKED`; DQ-01/02/03 remain registered as unresolved. DONE here means the engineering criteria are verified and committed; it does not resolve or approve any evidence item. See the Phase 1 closure assessment.
 
 - **Objective:** an honest, machine-checkable statement of data quality that feeds E02. Every known source discrepancy is registered exactly; nothing is waived.
 - **Dependencies:** P1.4, P1.5, P0.4.
@@ -426,7 +438,7 @@ State: engineering for P1.1–P1.6 is implemented in the working tree. What rema
 
 | ID | Class | Status (verified) | Blocks P1? | Minimum safe resolution | Verification |
 |---|---|---|---|---|---|
-| C1 | Acceptance | **Engineering sign-off given (2026-10-31):** P1.1–P1.6 accepted as engineering-implemented, subject to the documented acceptance criteria (see the sign-off block below). Still uncommitted; no stage is marked DONE. | Administrative only | Authorize Git writes (commits) and say whether to apply DONE markers, which in this document cite commits. | `git status`; your instruction |
+| C1 | Acceptance | **Engineering sign-off given (2026-10-31):** P1.1–P1.6 accepted as engineering-implemented, subject to the documented acceptance criteria (see the sign-off block below). **Committed 2026-10-31** (`7f43f66`, `2a65abd`; earlier stages `1a1e843`, `771675e`, `4c18e0d`, `abcdd27`); P1.1–P1.6 marked DONE as engineering stages. | Closed | None; "P1 COMPLETE" is not declared while the evidence gates stay open. | `git log` |
 | C2 | Acceptance | **Done (2026-10-31):** the one-time review of `eligibility_rules_review.md` took place; its outcome is the C-4 ruling (E7) with its limitation, and nothing else in the file was approved. The file is a snapshot of `cb-601c0399c999`, reconciled with the build (52 components, 37 safe / 15 not, 449 evidence records, same digests); it is gitignored and not regenerated automatically. | Review criterion met; P1.5 DONE still depends on C1 | None further; corrections go through config or the overlay. Automatic regeneration is not a P1 requirement (documented, not built). | Read the file; counts above. Age-table headings clarified 2026-10-31 (documentation only) |
 | E1 | Evidence | DQ-01 unresolved (KD-001, KD-002). | No (credits are `NOT_USED`) | A source-backed decision per baseline §5. | `validate` fails with "resolution review required" when it changes |
 | E2 | Evidence | DQ-02 unresolved (KD-003, OV-040). | No (`DISPLAY_ONLY`) | A source-backed level decision. | same |
@@ -449,7 +461,7 @@ State: engineering for P1.1–P1.6 is implemented in the working tree. What rema
 | P1.4 | 8 criteria + 3 "after a build" criteria; deterministic; fail-closed | `tests/integration/test_build*.py`; rebuild reuses `cb-601c0399c999`; inputs hash-identical | EC; KL: `VALIDATION.json` unverified, alias not PDF-checked |
 | P1.4 | Legacy baseline reproduces | `tools/check_legacy_baseline.py`: MATCH, 23 passed, 1 failed (DQ-01) | Baseline only, not a passing suite |
 | P1.5 | 24 rows, 4 age rules, 52 components; invariants; fail-closed | `test_eligibility_rules*.py`, review snapshot reconciled with the build | EC for the structuring; EB: A2, R1, E5/E1 stay capped; C-4 ruled (limitation below) |
-| P1.5 | "You review `eligibility_rules_review.md` once" | reviewed 2026-10-31; C-4 ruled with limitation | Met (C2); DONE marking waits on C1 |
+| P1.5 | "You review `eligibility_rules_review.md` once" | reviewed 2026-10-31; C-4 ruled with limitation | Met (C2); DONE applied after commit (C1) |
 | P1.6 | `validate` + `validation_report.json`; independent counts; audit counts 56/3, 49/8, 53/1, 53/8; no legacy-pass claim | `skillgraph validate` exit 0; `tests/unit/test_validate.py`, `tests/golden/` | EC |
 | P1.6 | Known-deviations rule: extra / changed / vanished each fail | `tests/golden/test_known_deviations.py`, `test_validate_failsafe.py` | EC |
 | P1.6 | DQ-01..15 asserted present with recorded status | 13 machine-confirmed; DQ-10 and DQ-13 `NOT_MACHINE_CHECKED` (above) | EC / KL |
@@ -462,7 +474,7 @@ State: engineering for P1.1–P1.6 is implemented in the working tree. What rema
 - **C-4 ruling, with its limitation (user ruling).** The 32 safe components in the 16 rows above may keep their current conditional classifications on the strength of the documented row-level audit decisions. **This is not cell-level geometry confirmation.** Their cell evidence stays `TRANSCRIBED` unless it is separately upgraded through the authorized evidence process. The ruling approves no overlay and upgrades no evidence. It does not apply to the 4 age rules (value geometry-confirmed, printed text `TRANSCRIBED`) or to Q2301/E1#c2 (cell geometry-confirmed by OV-001, row still `UNKNOWN`).
 - **Engineering sign-off (user).** P1.1–P1.6 are accepted as engineering-implemented, subject to the acceptance criteria in this document. This is **engineering acceptance, not approval of any pending evidence decision.**
 - **Not decided by either item (unchanged):** Q-2 (OV-002/003/004, OV-034/035), A2 corrections, P1.5-R1 (`Q2301/E5#c2`, `Q2301/E6#c2`, `Q0301/E2#c2`, `Q0301/E5#c2`), Q0301/E5 `ENGINE_USE_UNDECIDED`, Q2301/E1#c1, DQ-01, DQ-02, DQ-03. `config/overlay_approvals.yaml` is `approved: []`.
-- **Engineering acceptance versus the Phase 1 definition of done.** The definition below asks for: `verify-sources → build → validate` succeeding on the real data, all Phase 1 tests passing, no source file modified, and unresolved issues remaining explicitly unresolved. It therefore **permits** engineering acceptance with the documented unresolved evidence items as exceptions; it does not require them to be resolved. Each of its four conditions has verification evidence in the matrix above. The two administrative items that remain are the commit (C1) and whether the DONE markers are applied; this document marks no stage DONE and does not declare "P1 COMPLETE" until you say so. The legacy suite result (23 passed, 1 failed, DQ-01) is a documented baseline, not a passing suite.
+- **Engineering acceptance versus the Phase 1 definition of done.** The definition below asks for: `verify-sources → build → validate` succeeding on the real data, all Phase 1 tests passing, no source file modified, and unresolved issues remaining explicitly unresolved. It therefore **permits** engineering acceptance with the documented unresolved evidence items as exceptions; it does not require them to be resolved. Each of its four conditions has verification evidence in the matrix above. The two administrative items that remain are the commit (C1) and whether the DONE markers are applied; after the commits the P1.1–P1.6 stage markers were set to DONE as engineering stages, and this document still does not declare "P1 COMPLETE" while the evidence gates are open. The legacy suite result (23 passed, 1 failed, DQ-01) is a documented baseline, not a passing suite.
 
 **Not engineering blockers:** Checkpoint E (P1.5 close-out) defines no further work beyond this table and the status reconciliation; the evaluation engine is P3.
 
