@@ -23,9 +23,17 @@ Screenshots of the verified version are in `docs/demo/screenshots/` (`02_results
 `08_mobile_results`, `09_mobile_detail`, `11_1920` are the useful ones). They contain only hypothetical profiles and
 official-source titles; no labour-market figure appears.
 
+## What a judge sees first
+
+The page opens with a pre-filled example (the "Sewing helper" sample: garment work, Grade 10, 2 years, age 30) and a
+"How it works" strip (hypothetical profile -> documented entry-rule evaluation -> evidence-backed results; it folds away once
+results appear and can be reopened). Press **Show my options**. Every "Can't be determined" card lists the reasons the API
+returned (its own messages and codes, grouped, with the number of requirement parts each affects); nothing is hidden or shown
+as a match. Only the front end was changed for this: no verdict, rule, data or policy.
+
 ## Reliable demo script (hypothetical profiles only)
 
-1. **Sewing helper** (sample button): garment work, Grade 10, 2 years, age 30 -> Operator (SMO) *Entry rules met*,
+1. **Sewing helper** (sample button; also the pre-filled default): garment work, Grade 10, 2 years, age 30 -> Operator (SMO) *Entry rules met*,
    Inline Checker *Conditionally met* (holds only if the 2 years are relevant), Specialized Operator *Can't be determined*
    (uncertain extraction / unapproved overlay). Open "See evidence and requirements": every rule row shows its verdict, your answer
    used, and the source document, page and location.

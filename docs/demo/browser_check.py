@@ -31,12 +31,33 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(URL); pg.wait_for_selector("#status .chip")
     check("age field visible without opening a disclosure", pg.is_visible("#age"))
+    check("default example is the sewing helper (pre-filled, not yet submitted)",
+          pg.input_value("#current") == "GARMENT" and pg.input_value("#education") == "G10"
+          and pg.input_value("#years") == "2" and pg.input_value("#age") == "30" and pg.locator("article.card").count() == 0)
+    check("how it works: open, three steps", pg.locator("details#how").get_attribute("open") is not None
+          and pg.locator("details#how ol.steps li").count() == 3 and "Hypothetical profile" in pg.inner_text("details#how")
+          and "Documented entry-rule evaluation" in pg.inner_text("details#how") and "Evidence-backed results" in pg.inner_text("details#how"))
+    check("prototype disclaimers kept", "Not a prediction" in pg.inner_text(".caveat") and "NO_GO" in pg.inner_text("#status")
+          and "Prototype" in pg.inner_text("#status"))
     pg.screenshot(path=f"{OUT}/01_start.png")
+
+    pg.click("#go"); pg.wait_for_selector("article.card")  # the default example, submitted with the main button
+    check("default example: SMO first and met", "Sewing Machine Operator | ✓" in cards(pg)[0], cards(pg))
+    check("how it works collapses after the first results and can be reopened", pg.locator("details#how").get_attribute("open") is None
+          and (pg.click("details#how > summary") or True) and pg.locator("details#how ol.steps li").first.is_visible())
+    pg.click("details#how > summary")  # collapse again so later screenshots are unchanged in layout
 
     pg.click("[data-sample=helper]"); pg.wait_for_selector("article.card")
     c = cards(pg)
     check("helper: SMO met, IC conditional, SSMO unknown", len(c) == 3 and "Operator | ✓" in c[0] and "◐" in c[1] and "?" in c[2], c)
     check("legend shown", pg.locator("ul.legend li").count() == 4)
+    unk = pg.locator("article.card.v-UNKNOWN")
+    check("every UNKNOWN card lists its reasons (none hidden, none turned positive)", unk.count() >= 1 and all(
+        unk.nth(i).locator(".unk-box h4:has-text('Why this can’t be decided')").count() == 1
+        and unk.nth(i).locator(".unk-box ul.reasons li").count() >= 1 and unk.nth(i).locator(".badge.UNKNOWN").count() == 1
+        for i in range(unk.count())))
+    check("UNKNOWN reasons are grouped with counts and codes", unk.first.locator(".rmeta code").count() >= 1
+          and "requirement part" in unk.first.inner_text())
     check("age-not-stated notice absent when age given", pg.locator("text=Age not stated").count() == 0)
     pg.screenshot(path=f"{OUT}/02_results.png", full_page=True)
 
@@ -72,6 +93,7 @@ with sync_playwright() as p:
     check("validation: age", "14 to 80" in pg.inner_text("#age-err"))
 
     m = b.new_page(viewport={"width": 390, "height": 844}); m.goto(URL); m.wait_for_selector("#status .chip")
+    check("390px: how-it-works starts collapsed so the form comes first", m.locator("details#how").get_attribute("open") is None)
     m.click("[data-sample=helper]"); m.wait_for_selector("article.card")
     check("390px: no horizontal overflow", not m.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth"))
     check("390px: results scrolled into view", m.evaluate("document.getElementById('out').getBoundingClientRect().top < 120"))

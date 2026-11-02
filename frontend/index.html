@@ -135,6 +135,27 @@ table.t td.n, table.t th.n { text-align: right; font-variant-numeric: tabular-nu
 .route:first-child { border-top: 0; }
 .arrow { color: var(--ink-3); padding: 0 6px; }
 footer { color: var(--ink-3); font-size: .8rem; text-align: center; padding: 0 20px 40px; }
+
+/* how it works */
+.how { background: var(--panel); border-bottom: 1px solid var(--line); }
+.how .wrap { padding-top: 0; padding-bottom: 14px; }
+.how > summary { max-width: 1180px; margin: 0 auto; padding: 10px 20px; font-size: .85rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-2); }
+@media (min-width: 1600px) { .how > summary { max-width: 1380px; } }
+ol.steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 24px; }
+ol.steps li { display: flex; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--ink-2); }
+ol.steps .n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: .85rem; display: inline-flex; align-items: center; justify-content: center; }
+ol.steps strong { display: block; color: var(--ink); }
+@media (max-width: 760px) { ol.steps { grid-template-columns: 1fr; } }
+
+/* reasons an option cannot be decided (existing API reasons, grouped) */
+.unk-box { margin: 8px 0 10px; padding: 10px 14px; background: var(--unk-bg); border-radius: 8px; border: 1px solid #b5c1de; }
+.unk-box h4 { font-size: .9rem; color: var(--unk); margin: 0 0 4px; }
+ul.reasons { margin: 4px 0; padding-left: 20px; font-size: .92rem; }
+ul.reasons li { margin: 5px 0; }
+.rmeta { display: block; color: var(--ink-3); font-size: .78rem; }
+.rmeta code { font-size: .78rem; }
+.unk-box details { margin-top: 4px; }
+.unk-box details summary { font-size: .85rem; }
 </style>
 </head>
 <body>
@@ -150,6 +171,21 @@ footer { color: var(--ink-3); font-size: .8rem; text-align: center; padding: 0 2
 <div class="caveat" role="note">
   <div class="wrap"><strong>Not a prediction.</strong> This tool reads documented entry requirements for a <em>hypothetical</em> profile. It does not predict jobs, placement, earnings or labour demand, and it has no labour-market data.</div>
 </div>
+
+<noscript><div class="caveat"><div class="wrap">This demo needs JavaScript to run.</div></div></noscript>
+<details class="how" id="how" open>
+  <summary>How it works</summary>
+  <div class="wrap">
+    <ol class="steps">
+      <li><span class="n" aria-hidden="true">1</span><div><strong>Hypothetical profile</strong>
+        You give a few answers: education, years of garment work, age and any qualification already held. Nothing is stored and no real person is assessed.</div></li>
+      <li><span class="n" aria-hidden="true">2</span><div><strong>Documented entry-rule evaluation</strong>
+        Each pilot qualification&rsquo;s entry rules, as written in its official qualification file, are checked part by part against those answers by fixed rules, not by an AI model.</div></li>
+      <li><span class="n" aria-hidden="true">3</span><div><strong>Evidence-backed results</strong>
+        Every result shows which rule rows decided it, which of your answers were used, and the source document and location. If the evidence cannot settle a rule, the result says &ldquo;Can&rsquo;t be determined&rdquo; and gives the reason; nothing is guessed.</div></li>
+    </ol>
+  </div>
+</details>
 
 <main class="wrap layout" id="main">
   <aside>
@@ -217,7 +253,7 @@ footer { color: var(--ink-3); font-size: .8rem; text-align: center; padding: 0 2
   <section id="out" aria-live="polite" tabindex="-1">
     <div class="state">
       <h2>Start with your profile</h2>
-      <p>Answer the questions on the left, or load a sample profile. The system will check each pilot qualification's documented entry rules and show what the evidence supports.</p>
+      <p>An example is already filled in: a hypothetical sewing helper with Grade 10, 2 years of garment work and age 30. Press <strong>Show my options</strong> to check it against the Sewing Machine Operator pilot and the other pilot qualifications, or change any answer or load another sample profile. The system checks each qualification&rsquo;s documented entry rules and shows what the evidence supports.</p>
     </div>
   </section>
 </main>
@@ -327,12 +363,37 @@ function readForm() {
   return ok ? req : null;
 }
 
-function loadSample(key) {
+function fillSample(key) {
   const s = SAMPLES[key];
   $("current").value = s.current; $("education").value = s.education; $("years").value = s.years;
   $("age").value = s.age; $("nsqf").value = s.nsqf;
   if (s.nsqf) $("form").querySelector("details.adv").open = true;
-  $("form").requestSubmit();
+}
+function loadSample(key) { fillSample(key); $("form").requestSubmit(); }
+
+/* ---------- reasons an option cannot be decided: the API's own reasons, grouped, never rephrased ---------- */
+const byLabel = (r) => (r ? r.replaceAll("_", " ").toLowerCase() : null);
+function reasonGroups(list) {
+  const groups = new Map();
+  for (const u of list) {
+    const key = u.code + "\u0000" + u.text, g = groups.get(key);
+    if (g) { g.count += 1; if (u.resolvable_by) g.by.add(u.resolvable_by); }
+    else groups.set(key, { code: u.code, text: u.text, count: 1, by: new Set(u.resolvable_by ? [u.resolvable_by] : []) });
+  }
+  return [...groups.values()];
+}
+function reasonItem(g) {
+  const by = [...g.by].map(byLabel).join(", ");
+  return h("li", null, g.text, h("span", { class: "rmeta" }, h("code", null, g.code),
+    " · " + g.count + (g.count === 1 ? " requirement part" : " requirement parts") + (by ? " · resolvable by: " + by : "")));
+}
+function unknownBox(v) {
+  if (!v.unknown_reasons.length) return h("ul", { class: "why", "aria-label": "Why this appears" }, v.why.map((w) => h("li", null, w)));
+  const g = reasonGroups(v.unknown_reasons), shown = g.slice(0, 3), rest = g.slice(3);
+  return h("div", { class: "unk-box" }, h("h4", null, "Why this can’t be decided"),
+    h("ul", { class: "reasons" }, shown.map(reasonItem)),
+    rest.length ? h("details", null, h("summary", null, rest.length + " more " + (rest.length === 1 ? "reason" : "reasons")),
+      h("ul", { class: "reasons" }, rest.map(reasonItem))) : null);
 }
 
 async function submit(ev) {
@@ -351,7 +412,11 @@ async function submit(ev) {
 }
 
 /* ---------- views ---------- */
+let howCollapsed = false;
 function showState(node, focus) {
+  if (!howCollapsed && node.querySelector && node.querySelector("article.card, .state.error")) {
+    $("how").open = false; howCollapsed = true; // first results: tuck the explainer away; it stays one click away
+  }
   $("out").replaceChildren(node);
   if (focus) $("out").focus({ preventScroll: false });
 }
@@ -372,7 +437,7 @@ function card(v) {
         h("div", { class: "code" }, v.code + " · NSQF level " + v.nsqf_level)),
       badge(v.verdict)),
     h("p", { class: "headline" }, v.headline),
-    h("ul", { class: "why", "aria-label": "Why this appears" }, v.why.map((w) => h("li", null, w))),
+    v.verdict === "UNKNOWN" ? unknownBox(v) : h("ul", { class: "why", "aria-label": "Why this appears" }, v.why.map((w) => h("li", null, w))),
     h("div", { class: "facts" },
       h("span", null, "Official training hours: ", h("b", null, hrs(v.official_total_hours))),
       h("span", null, "Minimum age: ", h("b", null, f.min_age ?? "n/a")),
@@ -452,8 +517,8 @@ function renderDetail(v) {
   if (v.conditions.length) out.append(h("h3", { class: "section-title" }, "This holds only if…"),
     h("div", { class: "collapsible" }, h("ul", { class: "why" }, v.conditions.map((c) => h("li", null, c.text)))));
   if (v.unknown_reasons.length) out.append(h("h3", { class: "section-title" }, "What would resolve this"),
-    h("div", { class: "collapsible" }, h("ul", { class: "why" }, v.unknown_reasons.map((u) =>
-      h("li", null, u.text, u.resolvable_by ? " — resolvable by: " + u.resolvable_by.replaceAll("_", " ").toLowerCase() : "")))));
+    h("div", { class: "collapsible" }, h("ul", { class: "reasons" }, reasonGroups(v.unknown_reasons).map(reasonItem)),
+      h("p", { class: "sub" }, "Each reason is listed once with the number of requirement parts it affects; the rows below show every part.")));
 
   out.append(h("h3", { class: "section-title" }, "Entry requirements, checked against your answers"),
     h("p", { class: "sub" }, "Each row is one documented route into the qualification; a row needs all of its parts. The result is the best of the rows, combined with the minimum-age rule."));
@@ -511,6 +576,8 @@ $("form").addEventListener("submit", submit);
 document.querySelectorAll("[data-sample]").forEach((b) => b.addEventListener("click", () => loadSample(b.dataset.sample)));
 loadStatus().then((s) => { if (s && !s.serving) showError({ kind: "unavailable", message: s.reason || "No validated data build." }); });
 loadChoices();
+fillSample("helper"); // default example: a hypothetical sewing helper (not submitted until the user presses the button)
+if (window.matchMedia("(max-width: 760px)").matches) $("how").open = false; // keep the form first on small screens
 </script>
 </body>
 </html>
