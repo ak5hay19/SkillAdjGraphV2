@@ -38,16 +38,30 @@ of P3.6a and must not be exposed through a façade. Scenario flags belong to the
 ``HYPOTHETICAL`` for later steps. Its relevance cannot be declared by a profile, so where it is what satisfies a prior-level
 component the result is ``UNKNOWN(RELEVANCE_NOT_DECLARED)``, never ``NOT_MET``. The profile is never changed.
 
-**Not in P3.6a:** ``path_id``, ranking, hours and totals, explanations, inference annotations, ``is_hypothetical`` and the
-scenario flags. ``Q-B`` stays ``undecided_level_use = COMPARE`` (the ``evaluate`` default), PROVISIONAL.
+**Path identity (P3.6b, API_SPEC §4 amendment A-6, decided 2026-11-02).** ``path_id = "p-" + sha256_hex(canonical_json(payload))[:12]``
+(lowercase hex; ``json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)`` as UTF-8), ``payload`` being exactly
+``{"config": <EngineConfig>, "profile_digest": <the caller's digest>, "scenario": <Scenario>, "steps": [<ordered step target
+codes>]}``, the models serialised with ``model_dump(mode="json")``. ``profile_digest`` is a required keyword-only argument with no
+default, supplied by the caller (``eligibility.evaluate.identity_profile_digest`` of the same ``state``); this module neither
+imports ``logging_setup`` nor computes it, and it only checks the format ``^sha256:[0-9a-f]{64}$`` (``TypeError`` for a
+non-``str``, ``ValueError`` otherwise), before enumeration. Excluded from the identity: the build ID, ``sort_by``, ``limit``,
+``include_inference``, ``max_steps``, ``target_code`` and every ranking or display setting. Two paths with the same ID in one
+result raise ``GraphError``. A path ID identifies a query, not a result: another build can give the same ID a different verdict.
+The identity never influences which paths exist, their verdicts or their order.
+
+**Not yet implemented:** ranking, hours and totals, explanations, inference annotations, ``is_hypothetical`` and the scenario
+flags. ``Q-B`` stays ``undecided_level_use = COMPARE`` (the ``evaluate`` default), PROVISIONAL.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import Field, StrictBool, StrictInt, StrictStr, model_validator
+from pydantic import Field, StrictBool, StrictInt, StrictStr, StringConstraints, model_validator
 
 from skillgraph.eligibility.evaluate import EligibilityError, EligibilityResult, EngineConfig, ProfileState, evaluate
 from skillgraph.eligibility.logic import and_
@@ -68,6 +82,10 @@ __all__ = [
     "TargetNotEvaluableError",
     "enumerate_paths",
 ]
+
+
+_PATH_ID_PATTERN = r"^p-[0-9a-f]{12}$"
+_PROFILE_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 class LimitExceededError(GraphError):
@@ -116,14 +134,15 @@ class RawStep(SchemaModel):
 
 
 class RawPath(SchemaModel):
-    """The minimum P3.6a path (API_SPEC §4, A-5): ordered steps and their ``and_`` verdict. No identifier, rank or total."""
+    """The minimum path (API_SPEC §4, A-5, A-6): identifier, ordered steps and their ``and_`` verdict. No rank or total."""
 
+    path_id: Annotated[StrictStr, StringConstraints(pattern=_PATH_ID_PATTERN)]
     steps: Annotated[tuple[RawStep, ...], Field(min_length=1)]
     verdict: Verdict
 
     @property
     def target_codes(self) -> tuple[str, ...]:
-        """The ordered qualifications entered: a path's identity in P3.6a (there is no ``path_id`` yet)."""
+        """The ordered qualifications entered (one component of the identity; see ``path_id``)."""
         return tuple(s.target_code for s in self.steps)
 
     @model_validator(mode="after")
@@ -143,8 +162,25 @@ def _int(value: object, name: str) -> int:
     return value
 
 
+def _path_id(config: EngineConfig, scenario: Scenario, profile_digest: str, step_codes: tuple[str, ...]) -> str:
+    """``"p-"`` + the first 12 lowercase hex characters of the SHA-256 of the canonical JSON of exactly
+    ``{config, profile_digest, scenario, steps}`` (API_SPEC §4, A-6). Nothing else enters the identity."""
+    payload = {"config": config.model_dump(mode="json"), "profile_digest": profile_digest,
+               "scenario": scenario.model_dump(mode="json"), "steps": list(step_codes)}
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "p-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:12]
+
+
+def _require_unique_ids(paths: list[RawPath]) -> None:
+    seen: dict[str, tuple[str, ...]] = {}
+    for p in paths:
+        if p.path_id in seen:
+            raise GraphError(f"duplicate path_id {p.path_id} for {list(seen[p.path_id])} and {list(p.target_codes)}")
+        seen[p.path_id] = p.target_codes
+
+
 def _validate(state: object, registry: object, config: object, scenario: object, max_steps: object,
-              target_code: object, max_expansions: object, max_steps_limit: object) -> None:
+              target_code: object, max_expansions: object, max_steps_limit: object, profile_digest: object) -> None:
     """Every argument check, in a fixed order, before anything is enumerated or evaluated (O-2)."""
     for obj, cls, name in ((state, ProfileState, "state"), (registry, Registry, "registry"),
                            (config, EngineConfig, "config"), (scenario, Scenario, "scenario")):
@@ -152,6 +188,10 @@ def _validate(state: object, registry: object, config: object, scenario: object,
             raise TypeError(f"{name} must be a {cls.__name__}, got {type(obj).__name__}")
     if target_code is not None and not isinstance(target_code, str):
         raise TypeError(f"target_code must be a str or None, got {type(target_code).__name__}")
+    if not isinstance(profile_digest, str):
+        raise TypeError(f"profile_digest must be a str, got {type(profile_digest).__name__}")
+    if not _PROFILE_DIGEST.fullmatch(profile_digest):
+        raise ValueError("profile_digest must match ^sha256:[0-9a-f]{64}$")
     values = {"max_steps": _int(max_steps, "max_steps"), "max_expansions": _int(max_expansions, "max_expansions"),
               "max_steps_limit": _int(max_steps_limit, "max_steps_limit")}
     for name, v in values.items():
@@ -172,15 +212,17 @@ def enumerate_paths(
     *,
     max_expansions: int,
     max_steps_limit: int,
+    profile_digest: str,
 ) -> list[RawPath]:
     """Enumerate the simple paths of up to ``max_steps`` ``CURATED`` qualifications that the profile may enter.
 
     Returns the paths in depth-first pre-order (P-1). Raises ``TypeError`` / ``ValueError`` / ``LimitExceededError`` for
     arguments (module notes), ``ScenarioNotSupportedError`` for a non-default scenario, ``UnknownEntityError`` for an unknown
     code, ``TargetNotEvaluableError`` for a non-``CURATED`` target, ``EligibilityError`` for a ``CURATED`` qualification
-    without structured rules, and whatever ``eligibility.evaluate`` raises for malformed data. A valid but incomplete profile
-    never raises: it gives ``UNKNOWN`` steps. ``state`` is never changed."""
-    _validate(state, registry, config, scenario, max_steps, target_code, max_expansions, max_steps_limit)
+    without structured rules, ``GraphError`` for a duplicate ``path_id``, and whatever ``eligibility.evaluate`` raises for
+    malformed data. A valid but incomplete profile never raises: it gives ``UNKNOWN`` steps. ``state`` is never changed.
+    ``profile_digest`` is the caller's ``identity_profile_digest(state)`` and only feeds ``RawPath.path_id`` (module notes)."""
+    _validate(state, registry, config, scenario, max_steps, target_code, max_expansions, max_steps_limit, profile_digest)
     if scenario != Scenario():
         changed = sorted(k for k, v in scenario.model_dump().items() if v != getattr(Scenario(), k))
         raise ScenarioNotSupportedError(f"P3.6a supports only the default scenario; non-default: {', '.join(changed)}")
@@ -218,9 +260,11 @@ def enumerate_paths(
             new = (*steps, step)
             at_target = target_code is None or q.code == target_code
             if at_target:
-                found.append(RawPath(steps=new, verdict=and_(*(s.eligibility.verdict for s in new))))
+                found.append(RawPath(path_id=_path_id(config, scenario, profile_digest, tuple(s.target_code for s in new)),
+                                     steps=new, verdict=and_(*(s.eligibility.verdict for s in new))))
             if q.code != target_code and len(new) < max_steps:  # past the target nothing can end at it (no repeats)
                 walk(new)
 
     walk(())
+    _require_unique_ids(found)
     return found

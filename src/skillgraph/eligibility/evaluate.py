@@ -42,6 +42,7 @@ D-6  Q-B (``docs/decisions/P3_2_AUDIT.md``). A held registry qualification's own
 
 from __future__ import annotations
 
+import hashlib
 import json
 from enum import StrEnum
 from typing import Annotated, Collection
@@ -91,6 +92,7 @@ __all__ = [
     "TargetDeclaration",
     "UndecidedLevelUse",
     "evaluate",
+    "identity_profile_digest",
 ]
 
 DELIMITER = " || "  # a space, two vertical bars, a space (ARCHITECTURE §9.2, cell mapping)
@@ -169,6 +171,47 @@ class ProfileState(SchemaModel):
             if (codes is None and ext is None) or not set(rel) <= refs:
                 raise ValueError("relevant_prior_qualifications must refer to declared holdings")
         return self
+
+
+def identity_profile_digest(state: ProfileState) -> str:
+    """The identity of a validated profile, for path identity (API_SPEC §4 amendment A-6; TASKS P3.6).
+
+    ``"sha256:"`` plus the lowercase hex SHA-256 of the UTF-8 bytes of ``json.dumps(projection, sort_keys=True,
+    separators=(",", ":"), ensure_ascii=False)``, the models serialised with ``model_dump(mode="json")``. It is NOT
+    ``logging_setup.profile_digest`` (a digest of the raw mapping, for logs), which is unchanged.
+
+    Projection: ``age_years``; ``school_grade_passed``; ``post_school_credentials`` (the ``type`` of each credential, sorted,
+    duplicates KEPT: ``inputs_used`` echoes the declared credentials, so a duplicate changes the serialised result);
+    ``held_qualification_codes`` (sorted); ``external_qualifications`` (``{ref, nsqf_level}`` sorted by ``ref``);
+    ``declarations`` (sorted by ``target_code``, each ``{target_code, relevant_experience_years,
+    relevant_prior_qualifications}`` with the last sorted). Only these set-like collections are put in order. ``None`` (not
+    declared) and ``[]`` (declared none) stay distinct for every nullable field. The three display labels (the request
+    ``label``, ``PostSchoolCredential.label`` and ``ExternalQualification.label``) are excluded: nothing
+    in the engine reads them, so they cannot reach a verdict, a condition or an ``inputs_used`` entry."""
+    if not isinstance(state, ProfileState):
+        raise TypeError(f"state must be a ProfileState, got {type(state).__name__}")
+    d = state.model_dump(mode="json")
+
+    def ordered(values: list | None) -> list | None:
+        return None if values is None else sorted(values)
+
+    ext = d["external_qualifications"]
+    projection = {
+        "age_years": d["age_years"],
+        "school_grade_passed": d["school_grade_passed"],
+        "post_school_credentials": (None if d["post_school_credentials"] is None
+                                    else sorted(c["type"] for c in d["post_school_credentials"])),
+        "held_qualification_codes": ordered(d["held_qualification_codes"]),
+        "external_qualifications": (None if ext is None else
+                                    sorted(({"ref": e["ref"], "nsqf_level": e["nsqf_level"]} for e in ext),
+                                           key=lambda e: e["ref"])),
+        "declarations": sorted(({"target_code": x["target_code"],
+                                 "relevant_experience_years": x["relevant_experience_years"],
+                                 "relevant_prior_qualifications": ordered(x["relevant_prior_qualifications"])}
+                                for x in d["declarations"]), key=lambda x: x["target_code"]),
+    }
+    canonical = json.dumps(projection, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------------------------------------------------------------------------------

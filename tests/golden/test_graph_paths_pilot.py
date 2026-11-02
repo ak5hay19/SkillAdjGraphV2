@@ -12,7 +12,8 @@ Expected values are derived by hand from the printed rules and the documented co
 
 PROVISIONAL markers: Q-B (``undecided_level_use = COMPARE``, the ``evaluate`` default, which the E07 profile result relies on;
 see ``docs/decisions/P3_2_AUDIT.md``) and the hypothetical-relevance rule (TASKS P3.6 A-3 / O-4). P-1 to P-5 are implementation
-decisions of 2026-11-02, not contract text. Nothing here claims the P3.6 inference invariant: there is no ``path_id`` yet.
+decisions of 2026-11-02, not contract text. The caller supplies ``profile_digest`` (P3.6b, A-6). Nothing here claims the P3.6 inference invariant; the path-identity
+invariants are in tests/unit/test_path_identity.py and tests/golden/test_path_identity_pilot.py.
 """
 
 import itertools
@@ -27,6 +28,7 @@ from skillgraph.eligibility.evaluate import (
     TargetDeclaration,
     UndecidedLevelUse,
     evaluate,
+    identity_profile_digest,
 )
 from skillgraph.graph import (
     LimitExceededError,
@@ -76,7 +78,8 @@ def D(code, years=None, rel=None) -> TargetDeclaration:
 
 
 def paths(reg, limits, state, *, max_steps=3, target=None, match="exact", scenario=None):
-    return enumerate_paths(state, reg, EngineConfig(nsqf_level_match=match), scenario or Scenario(), max_steps, target, **limits)
+    return enumerate_paths(state, reg, EngineConfig(nsqf_level_match=match), scenario or Scenario(), max_steps, target,
+                           profile_digest=identity_profile_digest(state), **limits)
 
 
 def e07_state() -> ProfileState:
@@ -222,9 +225,10 @@ def test_a_hypothetically_completed_smo_leaves_ssmo_row_9_unknown_not_not_met(re
 def test_the_real_guard_estimate_is_n_to_the_k_over_the_curated_not_held(reg):
     state = e07_state()  # SMO held: n = 3
     args = (state, reg, EngineConfig(nsqf_level_match="exact"), Scenario(), 3, None)
-    assert enumerate_paths(*args, max_expansions=27, max_steps_limit=4)
+    digest = identity_profile_digest(state)
+    assert enumerate_paths(*args, max_expansions=27, max_steps_limit=4, profile_digest=digest)
     with pytest.raises(LimitExceededError):
-        enumerate_paths(*args, max_expansions=26, max_steps_limit=4)
+        enumerate_paths(*args, max_expansions=26, max_steps_limit=4, profile_digest=digest)
 
 
 def test_max_steps_above_the_settings_hard_limit_is_refused(reg, limits):

@@ -29,7 +29,13 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from skillgraph.api.demo_explore import ExploreError, ExploreRequest, explore
 from skillgraph.curation.build import CURATION_CODE_VERSION
-from skillgraph.eligibility.evaluate import EligibilityError, EngineConfig, ProfileState, evaluate
+from skillgraph.eligibility.evaluate import (
+    EligibilityError,
+    EngineConfig,
+    ProfileState,
+    evaluate,
+    identity_profile_digest,
+)
 from skillgraph.graph import (
     LimitExceededError,
     Scenario,
@@ -237,7 +243,8 @@ def create_app(
         try:
             raw = enumerate_paths(req.profile, registry, EngineConfig(nsqf_level_match=req.nsqf_level_match),
                                   Scenario(), steps, req.target_code, max_expansions=cfg.paths.max_expansions,
-                                  max_steps_limit=cfg.paths.max_steps_limit)
+                                  max_steps_limit=cfg.paths.max_steps_limit,
+                                  profile_digest=identity_profile_digest(req.profile))
         except LimitExceededError as exc:
             raise HTTPException(status_code=422, detail={"error": "LIMIT_EXCEEDED", "message": str(exc)}) from None
         except TargetNotEvaluableError:

@@ -556,7 +556,7 @@ def test_the_config_accepts_only_the_documented_interpretations():
 def test_evaluate_imports_only_model_registry_and_eligibility_modules():
     src = Path(__file__).resolve().parents[2] / "src" / "skillgraph" / "eligibility" / "evaluate.py"
     allowed = ("skillgraph.model", "skillgraph.registry", "skillgraph.eligibility")
-    stdlib = {"json", "enum", "typing", "__future__"}
+    stdlib = {"hashlib", "json", "enum", "typing", "__future__"}  # hashlib: identity_profile_digest (P3.6b, A-6)
     bad = []
     for node in ast.walk(ast.parse(src.read_text(encoding="utf-8"))):
         names = [a.name for a in node.names] if isinstance(node, ast.Import) else [node.module] if isinstance(node, ast.ImportFrom) else []

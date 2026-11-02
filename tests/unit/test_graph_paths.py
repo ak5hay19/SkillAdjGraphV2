@@ -44,7 +44,9 @@ from skillgraph.registry import Registry, UnknownEntityError
 
 N, U, C, M = Verdict.NOT_MET, Verdict.UNKNOWN, Verdict.CONDITIONAL, Verdict.MET
 SRC = Path(__file__).resolve().parents[2] / "src" / "skillgraph"
-LIMITS = {"max_expansions": 10_000, "max_steps_limit": 4}  # the Settings.paths values, supplied by the caller
+DIGEST = "sha256:" + "0" * 64  # a well-formed identity digest; P3.6b identity is tested in test_path_identity.py
+# the Settings.paths values and the identity digest, all supplied by the caller
+LIMITS = {"max_expansions": 10_000, "max_steps_limit": 4, "profile_digest": DIGEST}
 ORDER = {N: 0, U: 1, C: 2, M: 3}  # the verdict lattice of API_SPEC §2.1, written out independently of the code
 
 
@@ -137,10 +139,10 @@ def spy(monkeypatch):
 def test_the_signature_is_the_documented_one_with_required_keyword_only_limits():
     params = inspect.signature(enumerate_paths).parameters
     assert list(params) == ["state", "registry", "config", "scenario", "max_steps", "target_code",
-                            "max_expansions", "max_steps_limit"]
+                            "max_expansions", "max_steps_limit", "profile_digest"]
     for name in ("state", "registry", "config", "scenario", "max_steps", "target_code"):
         assert params[name].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD and params[name].default is inspect.Parameter.empty
-    for name in ("max_expansions", "max_steps_limit"):  # A-1: keyword-only, no default
+    for name in ("max_expansions", "max_steps_limit", "profile_digest"):  # A-1, A-6: keyword-only, no default
         assert params[name].kind is inspect.Parameter.KEYWORD_ONLY and params[name].default is inspect.Parameter.empty
 
 
@@ -150,9 +152,11 @@ def test_the_limits_cannot_be_omitted_or_passed_positionally():
     with pytest.raises(TypeError):
         enumerate_paths(*args)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        enumerate_paths(*args, max_expansions=10)  # type: ignore[call-arg]
+        enumerate_paths(*args, max_expansions=10, profile_digest=DIGEST)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        enumerate_paths(*args, 10, 4)  # type: ignore[call-arg]
+        enumerate_paths(*args, max_steps_limit=4, profile_digest=DIGEST)  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        enumerate_paths(*args, 10, 4, DIGEST)  # type: ignore[call-arg]
 
 
 # ---- enumeration, order, determinism -----------------------------------------------------------------------------------
@@ -253,13 +257,13 @@ def test_raw_models_enforce_their_invariants():
     p = enum(reg, max_steps=2)[1]  # (1, 2)
     s1, s2 = p.steps
     with pytest.raises(ValidationError, match="AND of its step verdicts"):
-        RawPath(steps=p.steps, verdict=U)
+        RawPath(path_id=p.path_id, steps=p.steps, verdict=U)
     with pytest.raises(ValidationError, match="never repeated"):
-        RawPath(steps=(s1, s1.model_copy(update={"index": 2})), verdict=M)
+        RawPath(path_id=p.path_id, steps=(s1, s1.model_copy(update={"index": 2})), verdict=M)
     with pytest.raises(ValidationError, match="indexes"):
-        RawPath(steps=(s2,), verdict=M)
+        RawPath(path_id=p.path_id, steps=(s2,), verdict=M)
     with pytest.raises(ValidationError):
-        RawPath(steps=(), verdict=M)
+        RawPath(path_id=p.path_id, steps=(), verdict=M)
     with pytest.raises(ValidationError, match="already held"):
         RawStep(index=1, from_state=(code(1),), target_code=code(1), eligibility=s1.eligibility)
     with pytest.raises(ValidationError, match="another qualification"):
@@ -275,10 +279,12 @@ def test_raw_models_enforce_their_invariants():
 
 def test_extra_fields_are_refused_so_later_stage_fields_cannot_creep_in():
     p = enum(world({1: "M"}), max_steps=1)[0]
-    assert set(RawPath.model_fields) == {"steps", "verdict"}
+    assert set(RawPath.model_fields) == {"path_id", "steps", "verdict"}  # P3.6b added path_id (A-6) and nothing else
     assert set(RawStep.model_fields) == {"index", "from_state", "target_code", "eligibility"}
     with pytest.raises(ValidationError):
-        RawPath(steps=p.steps, verdict=p.verdict, path_id="p-3c9e0a1b2d4f")  # type: ignore[call-arg]
+        RawPath(path_id=p.path_id, steps=p.steps, verdict=p.verdict, rank=1)  # type: ignore[call-arg]
+    with pytest.raises(ValidationError):
+        RawPath(steps=p.steps, verdict=p.verdict)  # type: ignore[call-arg]  # path_id is required
 
 
 # ---- the guard ---------------------------------------------------------------------------------------------------------

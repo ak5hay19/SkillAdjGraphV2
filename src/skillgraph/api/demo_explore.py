@@ -25,6 +25,7 @@ from skillgraph.eligibility.evaluate import (
     ProfileState,
     TargetDeclaration,
     evaluate,
+    identity_profile_digest,
 )
 from skillgraph.graph import RawPath, Scenario, enumerate_paths
 from skillgraph.model.eligibility import Verdict
@@ -233,7 +234,8 @@ def explore(req: ExploreRequest, registry: Registry, cfg: Settings) -> dict[str,
     options.sort(key=lambda o: (VERDICT_CLASS[o[1].verdict], _hours_total(o[0]), o[0].code))
 
     raw_paths = enumerate_paths(profile, registry, config, Scenario(), ROUTE_MAX_STEPS, None,
-                                max_expansions=cfg.paths.max_expansions, max_steps_limit=cfg.paths.max_steps_limit)
+                                max_expansions=cfg.paths.max_expansions, max_steps_limit=cfg.paths.max_steps_limit,
+                                profile_digest=identity_profile_digest(profile))
 
     def routes_to(code: str) -> list[dict[str, object]]:
         views = [_route_view(p, registry) for p in raw_paths if len(p.steps) > 1 and p.steps[-1].target_code == code]
