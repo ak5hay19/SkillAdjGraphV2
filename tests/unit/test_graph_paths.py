@@ -256,35 +256,40 @@ def test_raw_models_enforce_their_invariants():
     reg = world({1: "M", 2: "M"})
     p = enum(reg, max_steps=2)[1]  # (1, 2)
     s1, s2 = p.steps
+    tot = p.official_hours_total  # O-5a: the new required field, supplied so that each case still tests its own invariant
     with pytest.raises(ValidationError, match="AND of its step verdicts"):
-        RawPath(path_id=p.path_id, steps=p.steps, verdict=U)
+        RawPath(path_id=p.path_id, steps=p.steps, verdict=U, official_hours_total=tot)
     with pytest.raises(ValidationError, match="never repeated"):
-        RawPath(path_id=p.path_id, steps=(s1, s1.model_copy(update={"index": 2})), verdict=M)
+        RawPath(path_id=p.path_id, steps=(s1, s1.model_copy(update={"index": 2})), verdict=M,
+                official_hours_total=2 * s1.official_hours.total.value)
     with pytest.raises(ValidationError, match="indexes"):
-        RawPath(path_id=p.path_id, steps=(s2,), verdict=M)
+        RawPath(path_id=p.path_id, steps=(s2,), verdict=M, official_hours_total=s2.official_hours.total.value)
     with pytest.raises(ValidationError):
-        RawPath(path_id=p.path_id, steps=(), verdict=M)
+        RawPath(path_id=p.path_id, steps=(), verdict=M, official_hours_total=0)
     with pytest.raises(ValidationError, match="already held"):
-        RawStep(index=1, from_state=(code(1),), target_code=code(1), eligibility=s1.eligibility)
+        RawStep(index=1, from_state=(code(1),), target_code=code(1), eligibility=s1.eligibility,
+                official_hours=s1.official_hours)
     with pytest.raises(ValidationError, match="another qualification"):
-        RawStep(index=1, from_state=(), target_code=code(2), eligibility=s1.eligibility)
+        RawStep(index=1, from_state=(), target_code=code(2), eligibility=s1.eligibility, official_hours=s1.official_hours)
     not_met = world({1: "N"})
     from skillgraph.eligibility.evaluate import evaluate  # the evaluator, to obtain a genuine NOT_MET result
     res = evaluate(not_met.qualification_by_code(code(1)).eligibility, profile(), EngineConfig(), not_met)
     assert res.verdict is N
     with pytest.raises(ValidationError, match="NOT_MET step"):
-        RawStep(index=1, from_state=(), target_code=code(1), eligibility=res)
+        RawStep(index=1, from_state=(), target_code=code(1), eligibility=res, official_hours=s1.official_hours)
     assert RawPath.model_validate_json(p.model_dump_json()) == p  # serialisable and round-trips
 
 
 def test_extra_fields_are_refused_so_later_stage_fields_cannot_creep_in():
     p = enum(world({1: "M"}), max_steps=1)[0]
-    assert set(RawPath.model_fields) == {"path_id", "steps", "verdict"}  # P3.6b added path_id (A-6) and nothing else
-    assert set(RawStep.model_fields) == {"index", "from_state", "target_code", "eligibility"}
+    # P3.6b added path_id (A-6); O-5a added official_hours_total and RawStep.official_hours, and nothing else
+    assert set(RawPath.model_fields) == {"path_id", "steps", "verdict", "official_hours_total"}
+    assert set(RawStep.model_fields) == {"index", "from_state", "target_code", "eligibility", "official_hours"}
     with pytest.raises(ValidationError):
-        RawPath(path_id=p.path_id, steps=p.steps, verdict=p.verdict, rank=1)  # type: ignore[call-arg]
+        RawPath(path_id=p.path_id, steps=p.steps, verdict=p.verdict, official_hours_total=p.official_hours_total,
+                rank=1)  # type: ignore[call-arg]
     with pytest.raises(ValidationError):
-        RawPath(steps=p.steps, verdict=p.verdict)  # type: ignore[call-arg]  # path_id is required
+        RawPath(steps=p.steps, verdict=p.verdict, official_hours_total=p.official_hours_total)  # type: ignore[call-arg]  # path_id is required
 
 
 # ---- the guard ---------------------------------------------------------------------------------------------------------

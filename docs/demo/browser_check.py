@@ -68,6 +68,10 @@ with sync_playwright() as p:
     check("detail: non-deciding rows collapsed", pg.locator("details.collapsible summary:has-text('Other documented routes')").count() == 1
           and not pg.locator("details.collapsible:has(summary:has-text('Other documented routes'))").first.get_attribute("open"))
     check("detail: enrolment/deadline not verified", "not verified" in t.lower())
+    check("detail: no multi-step routes shown, neutral note instead", "Routes that end here" not in t
+          and "total official hours" not in t and pg.locator("#routes-unavailable").count() == 1
+          and "not available in this prototype" in pg.inner_text("#routes-unavailable"))
+    check("detail: Operator shows 300 h official total", pg.locator("tr:has-text('Total') td.n:has-text('300')").count() >= 1)
     pg.screenshot(path=f"{OUT}/03_detail.png", full_page=True)
     pg.click("text=Back to options"); pg.wait_for_selector("article.card")
     pg.click("article.card >> nth=2 >> text=See evidence"); pg.wait_for_selector("#det-h")

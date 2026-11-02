@@ -1,0 +1,397 @@
+{
+  "agreement_with_expected_status": {
+    "disagreeing_case_ids": [],
+    "meaning": "Equality of the case status with the label stored in the case file; see dataset.origin and labels_note",
+    "n_agree": 19,
+    "n_labelled": 19
+  },
+  "cases": [
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g01-correct-met",
+      "category": "correct explanation",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "PASS",
+      "precheck": [],
+      "status": "PASS"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g02-correct-unknown",
+      "category": "correct explanation",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "UNKNOWN",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "PASS",
+      "precheck": [],
+      "status": "PASS"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g03-correct-conditional",
+      "category": "correct explanation",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "CONDITIONAL",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "PASS",
+      "precheck": [],
+      "status": "PASS"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g04-unsupported-outcome",
+      "category": "unsupported claim",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "FAIL",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "FAIL",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "FAIL",
+      "precheck": [
+        "GUARANTEE",
+        "OUTCOME_CLAIM"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g05-equivalence-exemption",
+      "category": "unsupported claim",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "FAIL",
+        "UNSUPPORTED_CLAIMS": "FAIL",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "UNKNOWN",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "FAIL",
+      "precheck": [
+        "EQUIVALENCE",
+        "EXEMPTION",
+        "REDUCED_HOURS"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g06-false-certainty-unknown",
+      "category": "false certainty",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "FAIL",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "FAIL"
+      },
+      "engine_verdict": "UNKNOWN",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "FAIL",
+      "precheck": [
+        "VERDICT_CERTAINTY"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g07-false-certainty-conditional",
+      "category": "false certainty",
+      "dimensions": {
+        "COMPLETENESS": "REVIEW_REQUIRED",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "FAIL",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "CONDITIONAL",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "FAIL",
+      "precheck": [
+        "VERDICT_CERTAINTY"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g08-verdict-contradiction",
+      "category": "verdict contradiction",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "FAIL",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "FAIL"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "FAIL",
+      "precheck": [
+        "VERDICT_CONTRADICTION"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g09-incomplete-reasons",
+      "category": "incomplete reasons",
+      "dimensions": {
+        "COMPLETENESS": "REVIEW_REQUIRED",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "UNKNOWN",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [],
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g10-lenient-judge-precheck",
+      "category": "precheck floor",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [
+        "GUARANTEE",
+        "OUTCOME_CLAIM"
+      ],
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g11-error-invalid-json",
+      "category": "execution error",
+      "dimensions": {},
+      "engine_verdict": "MET",
+      "error_detail": "not valid JSON: Expecting value: line 1 column 1 (char 0)",
+      "error_kind": "INVALID_JSON",
+      "expected_status": "ERROR",
+      "precheck": [],
+      "status": "ERROR"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g12-error-timeout",
+      "category": "execution error",
+      "dimensions": {},
+      "engine_verdict": "MET",
+      "error_detail": "the provider did not answer in time",
+      "error_kind": "PROVIDER_TIMEOUT",
+      "expected_status": "ERROR",
+      "precheck": [],
+      "status": "ERROR"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g13-error-verdict-field",
+      "category": "execution error",
+      "dimensions": {},
+      "engine_verdict": "MET",
+      "error_detail": "verdict_override: Extra inputs are not permitted",
+      "error_kind": "SCHEMA_INVALID",
+      "expected_status": "ERROR",
+      "precheck": [],
+      "status": "ERROR"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g14-error-ungrounded-quote",
+      "category": "execution error",
+      "dimensions": {},
+      "engine_verdict": "MET",
+      "error_detail": "UNSUPPORTED_CLAIMS: a quoted excerpt is not in the candidate text",
+      "error_kind": "GROUNDING_INVALID",
+      "expected_status": "ERROR",
+      "precheck": [],
+      "status": "ERROR"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g15-error-packet-refused",
+      "category": "execution error",
+      "dimensions": {},
+      "engine_verdict": null,
+      "error_detail": "packet invalid: Value error, a free-text field matches a contact-detail pattern; the packet is refused",
+      "error_kind": "PACKET_REFUSED",
+      "expected_status": "ERROR",
+      "precheck": [],
+      "status": "ERROR"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g16-lenient-judge-false-certainty-unknown",
+      "category": "precheck floor",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "UNKNOWN",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [
+        "VERDICT_CERTAINTY"
+      ],
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g17-lenient-judge-false-certainty-conditional",
+      "category": "precheck floor",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "CONDITIONAL",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [
+        "VERDICT_CERTAINTY"
+      ],
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g18-lenient-judge-contradiction-met",
+      "category": "precheck floor",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [
+        "VERDICT_CONTRADICTION"
+      ],
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "agrees_with_expected_status": true,
+      "case_id": "g19-lenient-judge-injection",
+      "category": "precheck floor",
+      "dimensions": {
+        "COMPLETENESS": "PASS",
+        "EVIDENCE_FAITHFULNESS": "PASS",
+        "UNCERTAINTY_HANDLING": "PASS",
+        "UNSUPPORTED_CLAIMS": "PASS",
+        "VERDICT_CONSISTENCY": "PASS"
+      },
+      "engine_verdict": "MET",
+      "error_detail": null,
+      "error_kind": null,
+      "expected_status": "REVIEW_REQUIRED",
+      "precheck": [
+        "REVIEWER_INSTRUCTION"
+      ],
+      "status": "REVIEW_REQUIRED"
+    }
+  ],
+  "counts": {
+    "by_dimension": {
+      "COMPLETENESS": {
+        "FAIL": 0,
+        "PASS": 12,
+        "REVIEW_REQUIRED": 2
+      },
+      "EVIDENCE_FAITHFULNESS": {
+        "FAIL": 2,
+        "PASS": 12,
+        "REVIEW_REQUIRED": 0
+      },
+      "UNCERTAINTY_HANDLING": {
+        "FAIL": 3,
+        "PASS": 11,
+        "REVIEW_REQUIRED": 0
+      },
+      "UNSUPPORTED_CLAIMS": {
+        "FAIL": 2,
+        "PASS": 12,
+        "REVIEW_REQUIRED": 0
+      },
+      "VERDICT_CONSISTENCY": {
+        "FAIL": 2,
+        "PASS": 12,
+        "REVIEW_REQUIRED": 0
+      }
+    },
+    "error_kinds": {
+      "GROUNDING_INVALID": 1,
+      "INVALID_JSON": 1,
+      "PACKET_REFUSED": 1,
+      "PROVIDER_TIMEOUT": 1,
+      "SCHEMA_INVALID": 1
+    },
+    "status": {
+      "ERROR": 5,
+      "FAIL": 5,
+      "PASS": 3,
+      "REVIEW_REQUIRED": 6
+    }
+  },
+  "dataset": {
+    "dataset_id": "judge-golden-synthetic-v1",
+    "digest": "sha256:eb40001ae464af728e977457712dcbe3e0a53e51992a0646d2a400829018787d",
+    "labels_note": "Engine scenarios use the fictional code TEST/Q9001 and are not real source values. Candidate texts and expected labels were written by the implementing engineer, and the scripted replies by the same engineer. They are NOT human-review labels and NOT ground truth; agreement with them is a pipeline regression check, not a measure of any model.",
+    "n_cases": 19,
+    "origin": "SYNTHETIC_ENGINEER_AUTHORED"
+  },
+  "judge_id": "mock-scripted",
+  "report_version": "1"
+}

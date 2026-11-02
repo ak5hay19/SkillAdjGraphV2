@@ -42,6 +42,17 @@ def test_index_serves_the_frontend(client):
     assert r.status_code == 200 and "SkillPath India" in r.text
 
 
+def test_the_detail_screen_does_not_present_multi_step_routes(client):
+    """No verified rule says which qualification sequences are meaningful (relevance A-7 and ranking P3.7 are not built), so
+    the detail screen must not list routes: it shows a neutral 'not available' note instead. The engine result is unchanged."""
+    html = client.get("/").text
+    assert "Routes that end here" not in html and "total official hours" not in html
+    assert ".routes" not in html and "rt.steps" not in html  # nothing in the page renders the routes field
+    assert '"routes-unavailable"' in html and "Route recommendations are not available in this prototype" in html
+    smo = explore(client, education="G10", years_in_job=2, age_years=30).json()["cards"][0]
+    assert (smo["code"], smo["verdict"], smo["official_total_hours"]) == (SMO, "MET", 300.0)  # engine output untouched
+
+
 def test_helper_profile_gives_three_ordered_cards_and_one_more_option(client):
     d = explore(client, education="G10", years_in_job=2, age_years=30).json()
     assert [(c["code"], c["verdict"]) for c in d["cards"]] == [(SMO, "MET"), (IC, "CONDITIONAL"), (SSMO, "UNKNOWN")]

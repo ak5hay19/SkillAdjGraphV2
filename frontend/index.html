@@ -550,13 +550,10 @@ function renderDetail(v) {
           h("td", null, u.core_or_noncore.replaceAll("_", " ").toLowerCase()), h("td", { class: "n" }, hrs(u.hours_total))))))));
   }
 
-  if (v.routes.length) {
-    out.append(h("h3", { class: "section-title" }, "Routes that end here"),
-      h("div", { class: "collapsible" }, v.routes.map((rt) => h("div", { class: "route" },
-        rt.steps.map((s, i) => [i ? h("span", { class: "arrow" }, "→") : null, h("strong", null, s.title), " ", h("span", { class: "code" }, "(" + hrs(s.hours) + ")")]),
-        " ", badge(rt.verdict), h("span", { class: "code" }, " total official hours " + hrs(rt.total_hours))))),
-      h("p", { class: "sub" }, "A later step that depends on an earlier one for its level stays undecided until the relevance is declared (provisional rule). A route is a reading of entry rules, not a prediction."));
-  }
+  /* Multi-step routes are deliberately not displayed: no verified rule here says which sequences of qualifications are meaningful
+     (relevance and ranking are not built), so listing them could suggest a recommendation that nothing supports. */
+  out.append(h("h3", { class: "section-title" }, "Multi-step routes"),
+    h("p", { class: "sub", id: "routes-unavailable" }, "Route recommendations are not available in this prototype. This screen shows only this qualification's own documented entry rules, evidence and official hours."));
 
   if (f.progression_claims.length) {
     out.append(h("h3", { class: "section-title" }, "What the qualification file says about progression"),

@@ -118,7 +118,7 @@ def test_formats():
 def test_a_malformed_path_id_is_refused_by_the_model(bad):
     p = enum(world({1: "M"}), max_steps=1)[0]
     with pytest.raises(ValidationError):
-        RawPath(path_id=bad, steps=p.steps, verdict=p.verdict)
+        RawPath(path_id=bad, steps=p.steps, verdict=p.verdict, official_hours_total=p.official_hours_total)
 
 
 # ---- (c) identical across runs and processes ---------------------------------------------------------------------------------

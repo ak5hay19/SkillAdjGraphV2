@@ -3,8 +3,8 @@
 ``enumerate_paths`` walks simple paths over the ``CURATED`` qualifications the profile does not hold, depth first, and keeps a
 step only if its eligibility verdict is not ``NOT_MET``. Eligibility of every step is decided by ``eligibility.evaluate``
 (P3.3); nothing here decides a verdict except the ``and_`` fold of a path. The module reads no inference edge, no static edge,
-no credit, no hours figure, no occupation and no labour-market value, so none of those can influence which paths exist, their
-verdicts or their order. Imports: ``model/``, ``registry/``, ``eligibility/`` and ``graph.edges`` (for ``GraphError``) only;
+no credit, no occupation and no labour-market value, and it reads official hours only to copy them onto a step (O-5a, below), so
+none of those can influence which paths exist, their verdicts or their order. Imports: ``model/``, ``registry/``, ``eligibility/`` and ``graph.edges`` (for ``GraphError``) only;
 never ``settings`` (ARCHITECTURE §6.2, amendment A-4). It is pure: no I/O, no global state, no randomness.
 
 **Contract amendments** (documented in API_SPEC §4 and TASKS P3.6): the limits ``max_expansions`` and ``max_steps_limit`` are
@@ -49,14 +49,25 @@ non-``str``, ``ValueError`` otherwise), before enumeration. Excluded from the id
 result raise ``GraphError``. A path ID identifies a query, not a result: another build can give the same ID a different verdict.
 The identity never influences which paths exist, their verdicts or their order.
 
-**Not yet implemented:** ranking, hours and totals, explanations, inference annotations, ``is_hypothetical`` and the scenario
-flags. ``Q-B`` stays ``undecided_level_use = COMPARE`` (the ``evaluate`` default), PROVISIONAL.
+**Official hours (O-5a, ARCHITECTURE §8.4 and §12; a data-contract extension only).** ``RawStep.official_hours`` is the target
+qualification's own ``HoursBreakdown`` from the registry, copied unchanged (all five values with their evidence IDs, value status,
+engine use and conflict IDs); credits are never read and nothing is recalculated, normalised or interpreted (a bridge module is
+not a reduced route). ``RawPath.official_hours_total`` is the ``RULE_DERIVED`` sum of the steps' full official totals (§12). The
+total of a step must be present, cite an evidence ID, carry no conflict, not be ``UNRESOLVED`` / ``PARSED_UNCERTAIN`` and have
+``engine_use`` ``SAFE_HOURS``; otherwise ``enumerate_paths`` raises ``GraphError`` (before any evaluation) rather than inventing,
+defaulting to zero or trusting the value. The other four values are copied as they are, including any conflict they carry.
+The choice of the one evidence ID that the API projects (API_SPEC §4 ``official_hours_evidence_id``) is UNRESOLVED (O-5b) and is
+not made here. Hours never influence which paths exist, their verdicts, their order or their ``path_id``.
+
+**Not yet implemented:** ranking, assumption and quality-flag counts, explanations, inference annotations, ``is_hypothetical``
+and the scenario flags. ``Q-B`` stays ``undecided_level_use = COMPARE`` (the ``evaluate`` default), PROVISIONAL.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from enum import StrEnum
 from typing import Annotated
@@ -66,10 +77,11 @@ from pydantic import Field, StrictBool, StrictInt, StrictStr, StringConstraints,
 from skillgraph.eligibility.evaluate import EligibilityError, EligibilityResult, EngineConfig, ProfileState, evaluate
 from skillgraph.eligibility.logic import and_
 from skillgraph.graph.edges import GraphError
-from skillgraph.model.base import Number, SchemaModel
+from skillgraph.model.base import Hours, Number, SchemaModel
 from skillgraph.model.eligibility import Verdict
+from skillgraph.model.evidence import EngineUse, ValueStatus
 from skillgraph.model.ids import QualificationCode
-from skillgraph.model.qualification import Coverage, Qualification
+from skillgraph.model.qualification import Coverage, HoursBreakdown, Qualification
 from skillgraph.registry import Registry
 
 __all__ = [
@@ -114,13 +126,48 @@ class Scenario(SchemaModel):
     incremental_hours_policy: IncrementalHoursPolicy = IncrementalHoursPolicy.NONE
 
 
+_UNTRUSTED_STATUSES = frozenset({ValueStatus.UNRESOLVED, ValueStatus.PARSED_UNCERTAIN})
+
+
+def _total_problem(hours: HoursBreakdown) -> str | None:
+    """Why the official total of a breakdown cannot be summed into a path total, or ``None`` if it can (O-5a).
+
+    Nothing is repaired: a missing, uncited, conflicted, unresolved or not-``SAFE_HOURS`` total is refused, never replaced."""
+    total = hours.total
+    if total.value is None:
+        return "its official total value is absent"
+    if total.evidence_id is None:
+        return "its official total has no evidence id"
+    if total.conflict_id is not None:
+        return f"its official total carries the open conflict {total.conflict_id}"
+    if total.value_status in _UNTRUSTED_STATUSES:
+        return f"its official total has value_status {total.value_status.value}"
+    if total.engine_use is not EngineUse.SAFE_HOURS:
+        return f"its official total has engine_use {None if total.engine_use is None else total.engine_use.value}, not SAFE_HOURS"
+    return None
+
+
+def _sum_totals(steps: tuple[RawStep, ...]) -> float:
+    """The documented rule (ARCHITECTURE §12): the sum of the full official totals of the steps. ``math.fsum`` is exactly
+    rounded and independent of order, so the result is deterministic. A total that is absent is an error, never zero."""
+    values: list[float] = []
+    for s in steps:
+        v = s.official_hours.total.value
+        if v is None:
+            raise ValueError(f"step {s.index}: the official total value is absent")
+        values.append(v)
+    return math.fsum(values)
+
+
 class RawStep(SchemaModel):
-    """One qualification entered by a path, with the full eligibility result that allowed it (never ``NOT_MET``)."""
+    """One qualification entered by a path, with the full eligibility result that allowed it (never ``NOT_MET``) and the
+    qualification's own official hours breakdown (copied unchanged; O-5a)."""
 
     index: Annotated[StrictInt, Field(ge=1)]
     from_state: tuple[StrictStr, ...]
     target_code: QualificationCode
     eligibility: EligibilityResult
+    official_hours: HoursBreakdown
 
     @model_validator(mode="after")
     def _check(self) -> RawStep:
@@ -130,15 +177,20 @@ class RawStep(SchemaModel):
             raise ValueError("the eligibility result belongs to another qualification")
         if self.target_code in self.from_state:
             raise ValueError("a step cannot enter a qualification that is already held")
+        problem = _total_problem(self.official_hours)
+        if problem is not None:
+            raise ValueError(f"{self.target_code}: {problem}")
         return self
 
 
 class RawPath(SchemaModel):
-    """The minimum path (API_SPEC §4, A-5, A-6): identifier, ordered steps and their ``and_`` verdict. No rank or total."""
+    """The minimum path (API_SPEC §4, A-5, A-6): identifier, ordered steps, their ``and_`` verdict and the sum of their
+    official totals (O-5a). No rank."""
 
     path_id: Annotated[StrictStr, StringConstraints(pattern=_PATH_ID_PATTERN)]
     steps: Annotated[tuple[RawStep, ...], Field(min_length=1)]
     verdict: Verdict
+    official_hours_total: Hours  # RULE_DERIVED (ARCHITECTURE §12): the sum of the steps' official totals, never a stored fact
 
     @property
     def target_codes(self) -> tuple[str, ...]:
@@ -153,6 +205,8 @@ class RawPath(SchemaModel):
             raise ValueError("a qualification is never repeated in a path")
         if self.verdict is not and_(*(s.eligibility.verdict for s in self.steps)):
             raise ValueError("the path verdict is the AND of its step verdicts")
+        if self.official_hours_total != _sum_totals(self.steps):
+            raise ValueError("official_hours_total must equal the sum of the steps' official totals")
         return self
 
 
@@ -219,7 +273,8 @@ def enumerate_paths(
     Returns the paths in depth-first pre-order (P-1). Raises ``TypeError`` / ``ValueError`` / ``LimitExceededError`` for
     arguments (module notes), ``ScenarioNotSupportedError`` for a non-default scenario, ``UnknownEntityError`` for an unknown
     code, ``TargetNotEvaluableError`` for a non-``CURATED`` target, ``EligibilityError`` for a ``CURATED`` qualification
-    without structured rules, ``GraphError`` for a duplicate ``path_id``, and whatever ``eligibility.evaluate`` raises for
+    without structured rules, ``GraphError`` for a duplicate ``path_id`` or for a ``CURATED`` candidate whose official total is
+    unusable (O-5a), and whatever ``eligibility.evaluate`` raises for
     malformed data. A valid but incomplete profile never raises: it gives ``UNKNOWN`` steps. ``state`` is never changed.
     ``profile_digest`` is the caller's ``identity_profile_digest(state)`` and only feeds ``RawPath.path_id`` (module notes)."""
     _validate(state, registry, config, scenario, max_steps, target_code, max_expansions, max_steps_limit, profile_digest)
@@ -245,6 +300,11 @@ def enumerate_paths(
     for q in candidates:
         if q.eligibility is None:
             raise EligibilityError(f"{q.code}: a CURATED qualification without structured eligibility rules (P-4)")
+    for q in candidates:  # O-5a: fail closed before any evaluation; nothing is repaired, defaulted to zero or skipped
+        problem = _total_problem(q.hours)
+        if problem is not None:
+            raise GraphError(f"{q.code}: official hours cannot be used on a path: {problem}")
+    hours_of = {q.code: q.hours for q in candidates}  # the registry's own breakdowns, copied unchanged onto each step
 
     found: list[RawPath] = []
 
@@ -256,12 +316,14 @@ def enumerate_paths(
             result = evaluate(q.eligibility, state, config, registry, hypothetical_codes=taken)
             if result.verdict is Verdict.NOT_MET:
                 continue  # never emitted and never extended
-            step = RawStep(index=len(steps) + 1, from_state=declared + taken, target_code=q.code, eligibility=result)
+            step = RawStep(index=len(steps) + 1, from_state=declared + taken, target_code=q.code, eligibility=result,
+                           official_hours=hours_of[q.code])
             new = (*steps, step)
             at_target = target_code is None or q.code == target_code
             if at_target:
                 found.append(RawPath(path_id=_path_id(config, scenario, profile_digest, tuple(s.target_code for s in new)),
-                                     steps=new, verdict=and_(*(s.eligibility.verdict for s in new))))
+                                     steps=new, verdict=and_(*(s.eligibility.verdict for s in new)),
+                                     official_hours_total=_sum_totals(new)))
             if q.code != target_code and len(new) < max_steps:  # past the target nothing can end at it (no repeats)
                 walk(new)
 
