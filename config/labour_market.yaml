@@ -1,8 +1,42 @@
 # Module A (labour-market) feasibility gate record. See ARCHITECTURE §21 and TASKS Phase 2.
 # gate_decision: GO | GO_REDUCED | NO_GO | NOT_ASSESSED
-# Until P2.5 records a decision, the module is not assessed and no labour-market
-# statistic may appear anywhere.
+# result (per criterion): PASS | FAIL | UNKNOWN
+# Recorded by P2.5 on 2026-11-01. Full record: docs/decisions/MODULE_A_GATE.md.
+# While gate_decision is NO_GO or NOT_ASSESSED, Module A is disabled and no
+# labour-market statistic may appear anywhere.
 
-gate_decision: NOT_ASSESSED
-decided_on: null
-criteria: []
+gate_decision: NO_GO
+decided_on: "2026-11-01"
+criteria:
+  - id: FG-1
+    name: Access
+    result: FAIL
+    note: No PLFS or other Module A data file obtained; no manifest entry; registration not attempted (Q-6 open).
+  - id: FG-2
+    name: Lawful reuse
+    result: FAIL
+    note: Terms UNCLEAR for microdata and published PLFS reports; DES and DGE content RESTRICTED. FAIL under the TASKS P2.2 rule (UNCLEAR means FG-2 FAIL until clarified), not a finding that reuse is prohibited.
+  - id: FG-3
+    name: Variables and metadata
+    result: UNKNOWN
+    note: Fields exist at label level in the public data dictionaries; NCO digits, code lists and definitions not verified.
+  - id: FG-4
+    name: Karnataka identification
+    result: UNKNOWN
+    note: State variable exists; the Karnataka code value is documented only in a State/UT code file that was not opened.
+  - id: FG-5
+    name: Sample adequacy
+    result: UNKNOWN
+    note: P2.4 not executed (no microdata files); no counts and no thresholds.
+  - id: FG-6
+    name: Round comparability
+    result: UNKNOWN
+    note: Sampling methodology revamped from January 2025; no comparability or concordance document read.
+  - id: FG-7
+    name: Weighting and reproduction
+    result: UNKNOWN
+    note: P2.4 not executed; no published figure reproduced and no tolerance defined.
+  - id: FG-8
+    name: NCO-2015 join
+    result: UNKNOWN
+    note: PLFS occupation depth not established; no NCO volume or concordance obtained.

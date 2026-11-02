@@ -119,7 +119,15 @@ def test_data_root_cannot_be_set_in_file(tmp_path):
 
 def test_companion_config_files_have_specified_defaults():
     lm = yaml.safe_load((REPO / "config" / "labour_market.yaml").read_text(encoding="utf-8"))
-    assert lm["gate_decision"] == "NOT_ASSESSED"
+    # P2.5 (2026-11-01) replaced the pre-gate default NOT_ASSESSED with a recorded decision.
+    # The test now checks the allowed values and the record's shape, not one pinned decision.
+    assert lm["gate_decision"] in {"GO", "GO_REDUCED", "NO_GO", "NOT_ASSESSED"}
+    if lm["gate_decision"] == "NOT_ASSESSED":
+        assert lm["decided_on"] is None and lm["criteria"] == []
+    else:
+        assert lm["decided_on"] is not None
+        assert [c["id"] for c in lm["criteria"]] == [f"FG-{i}" for i in range(1, 9)]
+        assert {c["result"] for c in lm["criteria"]} <= {"PASS", "FAIL", "UNKNOWN"}
     ov = yaml.safe_load((REPO / "config" / "overlay_approvals.yaml").read_text(encoding="utf-8"))
     assert ov == {"approved": []}
 
