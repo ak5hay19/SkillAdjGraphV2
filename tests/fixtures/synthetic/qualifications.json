@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "qualifications": [
+    {"code": "TEST/Q9001", "title": "Synthetic Qualification One", "level": 4},
+    {"code": "TEST/Q9002", "title": "Synthetic Qualification Two", "level": 5}
+  ],
+  "occupations": [
+    {"code": "TEST/N9001", "title": "Synthetic Occupation One"}
+  ]
+}

@@ -1,0 +1,33 @@
+# Default settings. Committed; contains no secrets (ARCHITECTURE §17).
+# Relative paths below resolve against the current working directory, except the
+# data.* paths, which resolve against SKILLGRAPH_DATA_ROOT (default: data/).
+# Unknown keys are rejected.
+
+data:
+  raw_dir: raw/2026-10-30
+  extracted_dir: processed/extracted_2026-10-30
+  audit_dir: processed/audit_2026-10-30_m1s1
+  acquisition_dir: processed/acquisition_2026-10-30
+  curated_dir: curated
+  outputs_dir: outputs
+  labour_dir: labour
+
+engine:
+  # No default interpretation: null makes every PRIOR_NSQF_LEVEL component UNKNOWN.
+  # Allowed values: exact | at_least | null.
+  nsqf_level_match: null
+
+paths:
+  max_steps_default: 3
+  max_steps_limit: 4
+  result_limit: 20
+  # Guard on the estimated n^k expansion before path enumeration (LimitExceededError).
+  # PROVISIONAL: the specification names this key but gives no value. 10000 is an approved
+  # starting point, not empirically validated; revisit once path enumeration exists (P3.6).
+  max_expansions: 10000
+
+inference:
+  enabled: false
+
+labour_market:
+  config: config/labour_market.yaml

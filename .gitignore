@@ -1,11 +1,10 @@
-@'
 # Acquired source data and generated datasets
 /data/
-/data_*/
 
 # Source documents and downloaded web pages, wherever they appear
 *.pdf
 *.html
+!/frontend/index.html
 *.htm
 *.doc
 *.docx
@@ -34,6 +33,8 @@
 !.env.example
 *.pem
 *.key
+*.p12
+*.pfx
 secrets/
 credentials/
 
@@ -45,6 +46,10 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+*.egg-info/
+.coverage
+.coverage.*
+htmlcov/
 
 # JavaScript and frontend build output
 node_modules/
@@ -65,4 +70,4 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
-'@ | Set-Content -Path ".gitignore" -Encoding utf8
+docs/PROJECT_HANDOFF.md

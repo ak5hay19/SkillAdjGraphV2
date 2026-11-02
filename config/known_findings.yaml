@@ -1,0 +1,29 @@
+# Known-findings register DQ-01..DQ-15 (ARCHITECTURE section 8.6; TASKS P1.6) and the audit's corrected status counts.
+# `status` is the recorded state of the finding, never an acceptance. `check` says how validation confirms that the
+# finding is still present in the curated build: a finding that is no longer present fails validation until reviewed.
+# `check: none` means the finding has no curated record to test; it is reported as NOT_MACHINE_CHECKED.
+
+findings:
+  - {id: DQ-01, status: UNRESOLVED_SOURCE_CONFLICT, check: conflicts, title: "SSMO credit totals conflict (QF rows 12 vs totals 14; N2302 QF 3 vs QP 5)", refs: ["conflict:OV-036", "conflict:OV-038"]}
+  - {id: DQ-02, status: UNRESOLVED_SOURCE_CONFLICT, check: conflicts, title: "DGT/VSQ/N0102 NSQF level in SSMO: QF 3.5 vs QP 4", refs: ["conflict:OV-040"]}
+  - {id: DQ-03, status: UNRESOLVED_LEAD_SOURCE_UNAVAILABLE, check: open_lead, title: "SSMO bridge/N2301 hours: comparison source C3 unavailable, comparison not performed", refs: ["src:C3"]}
+  - {id: DQ-04, status: NOT_FOUND, check: nco_title, title: "NCO 3122.3551 title not found in searched sources", refs: ["nco:3122.3551"]}
+  - {id: DQ-05, status: RECORDED_DISPLAY_ONLY, check: title_variant, title: "QP AMH/Q0103 title differs from the QF and catalogue titles", refs: ["qual:AMH/Q0103"]}
+  - {id: DQ-06, status: RECORDED_DISPLAY_ONLY, check: secondary_copy, title: "Two Inline Checker QF copies with different SHA-256 and identical extracted text", refs: ["src:B2", "src:B2b"]}
+  - {id: DQ-07, status: PENDING_APPROVAL, check: pending_overlays, title: "SSMO item 9 merged experience cell; OV-002..004 awaiting approval", refs: ["OV-002", "OV-003", "OV-004"], overlays: [OV-002, OV-003, OV-004]}
+  - {id: DQ-08, status: RECORDED_DISPLAY_ONLY, check: numbering_gap, title: "SSMO NOS table S.No. gap (6 missing, no row missing)", refs: ["qual:AMH/Q2301"]}
+  - {id: DQ-09, status: UNCERTAIN_EXTRACTION_CAPPED, check: row_unknown, title: "SSMO eligibility row 5 stray word; stays capped", refs: ["rule:AMH/Q2301/E5"], row: "rule:AMH/Q2301/E5"}
+  - {id: DQ-10, status: RECORDED_DISPLAY_ONLY, check: none, title: "Catalogue 'QP Version' may mean the NQR version", refs: [], note: "Evidence: legacy reconciliation.json check catalogue_qp_version = SEMANTIC_AMBIGUITY (a meaning question, not a value conflict; not a build input). ARCHITECTURE 8.6: display only."}
+  - {id: DQ-11, status: RECOMPUTED_BY_VALIDATION, check: recount, title: "Legacy reconciliation counts off by one; validation recomputes counts independently", refs: []}
+  - {id: DQ-12, status: PENDING_APPROVAL, check: pending_overlays, title: "One printed credit value covers the bridge row plus the first core NOS; OV-034/035 awaiting approval", refs: ["OV-034", "OV-035"], overlays: [OV-034, OV-035]}
+  - {id: DQ-13, status: RECORDED_DISPLAY_ONLY, check: none, title: "SMO QP and QF approval/review dates differ", refs: [], note: "Evidence: ACQUISITION_REPORT.md section 7 (prose; the dates are in no extraction table or curated record). ARCHITECTURE 8.6: display only."}
+  - {id: DQ-14, status: SOURCE_UNAVAILABLE, check: unavailable, title: "NQR records C3/C4 unavailable; C1/C2 lack the NSQF level in their HTML text (validation checks only the unavailable part)", refs: ["src:C3", "src:C4"], sources: [C3, C4]}
+  - {id: DQ-15, status: RECORDED_DISPLAY_ONLY, check: claims_unresolved, title: "Progression-claim titles do not exactly match catalogue titles; claims are display-only", refs: []}
+
+# The audit's corrected extraction status counts (TASKS P1.6): all six extraction tables, excluding the secondary copy
+# (doc_type QF_SECONDARY). [TRANSCRIBED, PARSED_UNCERTAIN] per qualification. A difference is investigated, not forced.
+audit_status_counts:
+  AMH/Q0301: [56, 3]
+  AMH/Q2301: [49, 8]
+  AMH/Q0103: [53, 1]
+  AMH/Q2101: [53, 8]

@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SkillPath India - qualification explorer (pilot demo)</title>
+<style>
+:root {
+  --ink: #14232b; --ink-2: #44555e; --ink-3: #55656d;
+  --bg: #f4f6f5; --panel: #ffffff; --line: #d9e0dd; --line-2: #eaefed;
+  --brand: #0b5c5a; --brand-ink: #ffffff; --brand-soft: #e3f1ef;
+  --met: #176b43; --met-bg: #e4f4ea;
+  --cond: #8a5a00; --cond-bg: #fcf0d4;
+  --unk: #3d4f78; --unk-bg: #e6ebf6;
+  --not: #9c2f27; --not-bg: #f9e5e2;
+  --focus: #1a55c8;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(20,35,43,.06), 0 4px 14px rgba(20,35,43,.05);
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+@media (min-width: 1600px) { html { font-size: 18px; } .wrap { max-width: 1380px; } }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 0; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+header.top { background: var(--brand); color: var(--brand-ink); }
+header.top .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
+.brand h1 { font-size: 1.35rem; letter-spacing: .01em; }
+.brand p { margin: 2px 0 0; font-size: .9rem; opacity: .85; }
+.status { font-size: .8rem; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); white-space: nowrap; }
+.chip.warn { background: #fcf0d4; color: #5e3d00; border-color: #e5c885; }
+
+.caveat { background: #fff8e6; border-bottom: 1px solid #ecd9a3; color: #4b3a0a; font-size: .9rem; }
+.caveat .wrap { padding-top: 9px; padding-bottom: 9px; }
+
+main.layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; padding-top: 24px; padding-bottom: 56px; align-items: start; }
+@media (max-width: 900px) { main.layout { grid-template-columns: 1fr; } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.panel.pad { padding: 20px; }
+form h2 { font-size: 1.1rem; margin-bottom: 4px; }
+.sub { color: var(--ink-2); font-size: .9rem; margin: 0 0 14px; }
+.field { margin: 0 0 14px; }
+label, .lbl { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 4px; }
+.opt { font-weight: 400; color: var(--ink-3); }
+.hint { display: block; font-weight: 400; color: var(--ink-3); font-size: .8rem; margin-top: 3px; }
+select, input[type=number] { width: 100%; padding: 9px 10px; border: 1px solid #aebbb6; border-radius: 8px; background: #fff; }
+select:hover, input:hover { border-color: var(--brand); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; border: 1px solid var(--brand); background: var(--brand); color: #fff; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+.btn:hover { background: #084644; }
+.btn.block { width: 100%; }
+.btn.ghost { background: #fff; color: var(--brand); }
+.btn.ghost:hover { background: var(--brand-soft); }
+.btn.small { padding: 6px 12px; font-size: .88rem; }
+.btn[disabled] { opacity: .6; cursor: progress; }
+details.adv { margin: 4px 0 16px; border-top: 1px solid var(--line-2); padding-top: 10px; }
+details summary { cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--brand); }
+.samples { margin-top: 18px; border-top: 1px solid var(--line-2); padding-top: 14px; }
+.samples h3 { font-size: .85rem; color: var(--ink-2); margin-bottom: 8px; }
+.samples .btn { margin: 0 6px 6px 0; }
+.err-inline { color: var(--not); font-size: .85rem; margin-top: 4px; }
+
+.results-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; margin-bottom: 12px; }
+.results-head h2 { font-size: 1.25rem; }
+.legend { list-style: none; margin: 0 0 16px; padding: 10px 14px; display: grid; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); font-size: .85rem; color: var(--ink-2); }
+.legend .badge { min-width: 9.5em; justify-content: center; margin-right: 4px; }
+.order-note { color: var(--ink-2); font-size: .85rem; max-width: 62ch; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 14px; }
+.card.v-MET { border-left-color: var(--met); } .card.v-CONDITIONAL { border-left-color: var(--cond); }
+.card.v-UNKNOWN { border-left-color: var(--unk); } .card.v-NOT_MET { border-left-color: var(--not); }
+.card-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-start; justify-content: space-between; }
+.rank { font-size: .78rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.card h3 { font-size: 1.25rem; margin: 2px 0; }
+.code { color: var(--ink-3); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .8rem; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+.badge.MET { background: var(--met-bg); color: var(--met); border-color: #a9d8bc; }
+.badge.CONDITIONAL { background: var(--cond-bg); color: var(--cond); border-color: #e3c47d; }
+.badge.UNKNOWN { background: var(--unk-bg); color: var(--unk); border-color: #b5c1de; }
+.badge.NOT_MET { background: var(--not-bg); color: var(--not); border-color: #e3aaa4; }
+.badge.cls { background: #eef2f0; color: var(--ink-2); border-color: var(--line); font-weight: 600; }
+.badge.cls.OFFICIAL { background: #e3f1ef; color: #0b5c5a; border-color: #a8d3cf; }
+.badge.cls.DECLARED { background: #eef0fb; color: #2f3f8f; border-color: #c4caea; }
+.headline { margin: 8px 0 6px; font-weight: 600; }
+ul.why { margin: 6px 0 10px; padding-left: 20px; color: var(--ink); font-size: .95rem; }
+ul.why li { margin: 2px 0; }
+.facts .nv { white-space: nowrap; }
+@media (max-width: 520px) { .facts { flex-direction: column; } .card { padding: 16px; } .btn.small { width: 100%; } }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .88rem; color: var(--ink-2); margin: 10px 0 12px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.nv { color: var(--ink-3); font-style: italic; }
+
+.section-title { font-size: 1rem; margin: 22px 0 8px; }
+.collapsible { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; }
+.mini { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-2); font-size: .92rem; }
+.mini:first-of-type { border-top: 0; }
+
+dl.reading { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 10px 0 0; font-size: .88rem; }
+dl.reading dt { font-weight: 600; } dl.reading dd { margin: 0; color: var(--ink-2); }
+dl.reading dd small { display: block; color: var(--ink-3); }
+
+.state { background: var(--panel); border: 1px dashed #aebbb6; border-radius: var(--radius); padding: 28px 22px; text-align: center; color: var(--ink-2); }
+.state h2 { font-size: 1.1rem; color: var(--ink); margin-bottom: 6px; }
+.state.error { border-color: #e3aaa4; background: var(--not-bg); color: #5c1e19; }
+.spinner { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--brand); animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* detail view */
+.back { margin-bottom: 14px; }
+.detail-head { padding: 20px; }
+.detail-head h2 { font-size: 1.4rem; }
+.callout { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: .9rem; background: #f1f5f3; border: 1px solid var(--line); }
+.callout.cav { background: #fff8e6; border-color: #ecd9a3; color: #4b3a0a; }
+.rowbox { border: 1px solid var(--line); border-radius: 8px; margin: 10px 0; overflow: hidden; background: #fff; }
+.rowbox.decisive { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+.rowbox > header { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f6f9f8; }
+.rowbox > header .t { font-weight: 600; font-size: .93rem; }
+.comp { padding: 10px 12px; border-top: 1px solid var(--line-2); font-size: .9rem; }
+.comp .rq { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; }
+.comp .sm { color: var(--ink-3); font-size: .82rem; margin-top: 4px; }
+.comp .why-unk { color: var(--unk); margin-top: 4px; font-size: .85rem; }
+table.t { width: 100%; border-collapse: collapse; font-size: .9rem; }
+table.t th, table.t td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+table.t th { color: var(--ink-3); font-weight: 600; font-size: .8rem; }
+table.t td.n, table.t th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.route { padding: 8px 0; border-top: 1px solid var(--line-2); font-size: .92rem; }
+.route:first-child { border-top: 0; }
+.arrow { color: var(--ink-3); padding: 0 6px; }
+footer { color: var(--ink-3); font-size: .8rem; text-align: center; padding: 0 20px 40px; }
+
+/* how it works */
+.how { background: var(--panel); border-bottom: 1px solid var(--line); }
+.how .wrap { padding-top: 0; padding-bottom: 14px; }
+.how > summary { max-width: 1180px; margin: 0 auto; padding: 10px 20px; font-size: .85rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-2); }
+@media (min-width: 1600px) { .how > summary { max-width: 1380px; } }
+ol.steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 24px; }
+ol.steps li { display: flex; gap: 10px; align-items: flex-start; font-size: .88rem; color: var(--ink-2); }
+ol.steps .n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: .85rem; display: inline-flex; align-items: center; justify-content: center; }
+ol.steps strong { display: block; color: var(--ink); }
+@media (max-width: 760px) { ol.steps { grid-template-columns: 1fr; } }
+
+/* reasons an option cannot be decided (existing API reasons, grouped) */
+.unk-box { margin: 8px 0 10px; padding: 10px 14px; background: var(--unk-bg); border-radius: 8px; border: 1px solid #b5c1de; }
+.unk-box h4 { font-size: .9rem; color: var(--unk); margin: 0 0 4px; }
+ul.reasons { margin: 4px 0; padding-left: 20px; font-size: .92rem; }
+ul.reasons li { margin: 5px 0; }
+.rmeta { display: block; color: var(--ink-3); font-size: .78rem; }
+.rmeta code { font-size: .78rem; }
+.unk-box details { margin-top: 4px; }
+.unk-box details summary { font-size: .85rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>SkillPath India</h1>
+      <p>Evidence-first qualification explorer &middot; pilot: AMHSSC garment sector (4 qualifications)</p>
+    </div>
+    <div class="status" id="status" aria-label="Data status"></div>
+  </div>
+</header>
+<div class="caveat" role="note">
+  <div class="wrap"><strong>Not a prediction.</strong> This tool reads documented entry requirements for a <em>hypothetical</em> profile. It does not predict jobs, placement, earnings or labour demand, and it has no labour-market data.</div>
+</div>
+
+<noscript><div class="caveat"><div class="wrap">This demo needs JavaScript to run.</div></div></noscript>
+<details class="how" id="how" open>
+  <summary>How it works</summary>
+  <div class="wrap">
+    <ol class="steps">
+      <li><span class="n" aria-hidden="true">1</span><div><strong>Hypothetical profile</strong>
+        You give a few answers: education, years of garment work, age and any qualification already held. Nothing is stored and no real person is assessed.</div></li>
+      <li><span class="n" aria-hidden="true">2</span><div><strong>Documented entry-rule evaluation</strong>
+        Each pilot qualification&rsquo;s entry rules, as written in its official qualification file, are checked part by part against those answers by fixed rules, not by an AI model.</div></li>
+      <li><span class="n" aria-hidden="true">3</span><div><strong>Evidence-backed results</strong>
+        Every result shows which rule rows decided it, which of your answers were used, and the source document and location. If the evidence cannot settle a rule, the result says &ldquo;Can&rsquo;t be determined&rdquo; and gives the reason; nothing is guessed.</div></li>
+    </ol>
+  </div>
+</details>
+
+<main class="wrap layout" id="main">
+  <aside>
+    <form class="panel pad" id="form" novalidate>
+      <h2>About you (hypothetical)</h2>
+      <p class="sub">Four short answers. Nothing is stored.</p>
+
+      <div class="field">
+        <label for="current">Current qualification or job</label>
+        <select id="current" name="current" required></select>
+      </div>
+      <div class="field">
+        <label for="education">Highest education</label>
+        <select id="education" name="education">
+          <option value="NOT_STATED">Prefer not to say</option>
+          <optgroup label="School grade passed">
+            <option value="G5">Grade 5</option><option value="G6">Grade 6</option><option value="G7">Grade 7</option>
+            <option value="G8">Grade 8</option><option value="G9">Grade 9</option><option value="G10">Grade 10</option>
+            <option value="G11">Grade 11</option><option value="G12">Grade 12</option>
+          </optgroup>
+          <optgroup label="Post-school credential">
+            <option value="UG_CERTIFICATE">Certificate (post-school)</option>
+            <option value="UG_DIPLOMA">Diploma (post-school)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label for="years">Years in current job
+          <span class="hint">Counted as relevant experience only for garment / sewing work.</span></label>
+        <input id="years" name="years" type="number" min="0" max="60" step="0.5" inputmode="decimal" placeholder="e.g. 2">
+        <div class="err-inline" id="years-err" role="alert"></div>
+      </div>
+
+      <div class="field">
+        <label for="age">Age <span class="opt">(recommended)</span>
+          <span class="hint">Every qualification has a minimum age. If you leave this blank, that rule cannot be checked, so no option can be shown as met. No age is assumed.</span></label>
+        <input id="age" name="age" type="number" min="14" max="80" step="1" inputmode="numeric" placeholder="e.g. 30">
+        <div class="err-inline" id="age-err" role="alert"></div>
+      </div>
+
+      <details class="adv">
+        <summary>Advanced: NSQF level comparison</summary>
+        <div class="field">
+          <label for="nsqf">NSQF level comparison
+            <span class="hint">How a level-based rule compares your held qualification's level. The project has no default reading; &ldquo;Not set&rdquo; leaves such rules undecided.</span></label>
+          <select id="nsqf" name="nsqf">
+            <option value="">Not set (rules stay undecided)</option>
+            <option value="at_least">A stated level means that level or higher</option>
+            <option value="exact">A stated level means exactly that level</option>
+          </select>
+        </div>
+      </details>
+
+      <button class="btn block" type="submit" id="go">Show my options</button>
+
+      <div class="samples">
+        <h3>Hypothetical sample profiles</h3>
+        <button class="btn ghost small" type="button" data-sample="helper">Sewing helper</button>
+        <button class="btn ghost small" type="button" data-sample="smo">Holds Operator cert.</button>
+        <button class="btn ghost small" type="button" data-sample="minor">Under 18</button>
+      </div>
+    </form>
+  </aside>
+
+  <section id="out" aria-live="polite" tabindex="-1">
+    <div class="state">
+      <h2>Start with your profile</h2>
+      <p>An example is already filled in: a hypothetical sewing helper with Grade 10, 2 years of garment work and age 30. Press <strong>Show my options</strong> to check it against the Sewing Machine Operator pilot and the other pilot qualifications, or change any answer or load another sample profile. The system checks each qualification&rsquo;s documented entry rules and shows what the evidence supports.</p>
+    </div>
+  </section>
+</main>
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+const VERDICT = {
+  MET: ["Entry rules met", "✓"], CONDITIONAL: ["Conditionally met", "◐"],
+  UNKNOWN: ["Can’t be determined", "?"], NOT_MET: ["Not met", "✕"],
+};
+const KIND = { HOLDS: "HOLDS_QUALIFICATION", GARMENT: "GARMENT_WORK_NO_QUALIFICATION", OTHER: "OTHER_WORK" };
+const SAMPLES = {
+  helper: { current: "GARMENT", education: "G10", years: "2", age: "30", nsqf: "" },
+  smo:    { current: "HOLD:AMH/Q0301", education: "G10", years: "3", age: "30", nsqf: "" },
+  minor:  { current: "GARMENT", education: "G10", years: "1", age: "17", nsqf: "" },
+};
+const $ = (id) => document.getElementById(id);
+let lastData = null, lastReq = null;
+
+/* ---------- tiny safe DOM builder: text only, never innerHTML with data ---------- */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v === null || v === undefined) continue;
+    if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const badge = (v) => h("span", { class: "badge " + v }, VERDICT[v][1] + " " + VERDICT[v][0]);
+const clsBadge = (c) => h("span", { class: "badge cls " + c, title: "Evidence class" }, c);
+const num = (x) => (x === null || x === undefined ? null : Number(x).toLocaleString("en-IN", { maximumFractionDigits: 1 }));
+const hrs = (x) => (x === null || x === undefined ? "n/a" : num(x) + " h");
+
+async function api(path, body) {
+  let res;
+  try {
+    res = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch (e) {
+    throw { kind: "network", message: "Could not reach the SkillPath server. Is it running?" };
+  }
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+  if (!res.ok) {
+    const d = data && (data.detail || data);
+    const msg = (d && (d.message || d.error)) || ("Server answered " + res.status);
+    throw { kind: res.status === 503 ? "unavailable" : "request", status: res.status, message: msg, raw: d };
+  }
+  return data;
+}
+
+/* ---------- status banner ---------- */
+async function loadStatus() {
+  const box = $("status");
+  box.replaceChildren();
+  try {
+    const s = await api("/demo/status");
+    box.append(
+      h("span", { class: "chip" }, "Build " + (s.data_build_id || "none")),
+      h("span", { class: s.serving ? "chip" : "chip warn" }, s.serving ? "Validation: " + s.validation : "Not serving: " + (s.reason || "")),
+      h("span", { class: "chip" }, "Labour-market module: deferred (NO_GO)"),
+      h("span", { class: "chip" }, "Prototype – not the final API"));
+    $("foot").textContent = "Data build " + s.data_build_id + " · " + s.counts.qualifications_curated +
+      " evaluated qualifications + " + s.counts.qualifications_catalogue_only + " catalogue-only entries (not evaluated).";
+    return s;
+  } catch (e) {
+    box.append(h("span", { class: "chip warn" }, "Server unreachable"));
+    return null;
+  }
+}
+
+async function loadChoices() {
+  const sel = $("current");
+  sel.replaceChildren(h("option", { value: "GARMENT" }, "Garment / sewing work, no listed qualification"));
+  try {
+    const q = await api("/demo/qualifications");
+    const grp = h("optgroup", { label: "I hold a qualification" });
+    for (const it of q.curated) grp.append(h("option", { value: "HOLD:" + it.code }, it.title + " (" + it.code + ")"));
+    sel.append(grp);
+  } catch (e) { /* qualification choices unavailable; the status banner already says why */ }
+  sel.append(h("option", { value: "OTHER" }, "Other work, not garment related"));
+}
+
+/* ---------- form ---------- */
+function readForm() {
+  const cur = $("current").value;
+  const req = { education: $("education").value };
+  if (cur.startsWith("HOLD:")) { req.current_kind = KIND.HOLDS; req.held_code = cur.slice(5); }
+  else req.current_kind = KIND[cur] || KIND.GARMENT;
+  const yrs = $("years").value.trim(), age = $("age").value.trim(), nsqf = $("nsqf").value;
+  $("years-err").textContent = ""; $("age-err").textContent = "";
+  let ok = true;
+  if (yrs !== "") {
+    const y = Number(yrs);
+    if (!Number.isFinite(y) || y < 0 || y > 60) { $("years-err").textContent = "Enter a number from 0 to 60."; ok = false; } else req.years_in_job = y;
+  }
+  if (age !== "") {
+    const a = Number(age);
+    if (!Number.isInteger(a) || a < 14 || a > 80) { $("age-err").textContent = "Enter a whole number from 14 to 80."; ok = false; } else req.age_years = a;
+  }
+  if (nsqf) req.nsqf_level_match = nsqf;
+  return ok ? req : null;
+}
+
+function fillSample(key) {
+  const s = SAMPLES[key];
+  $("current").value = s.current; $("education").value = s.education; $("years").value = s.years;
+  $("age").value = s.age; $("nsqf").value = s.nsqf;
+  if (s.nsqf) $("form").querySelector("details.adv").open = true;
+}
+function loadSample(key) { fillSample(key); $("form").requestSubmit(); }
+
+/* ---------- reasons an option cannot be decided: the API's own reasons, grouped, never rephrased ---------- */
+const byLabel = (r) => (r ? r.replaceAll("_", " ").toLowerCase() : null);
+function reasonGroups(list) {
+  const groups = new Map();
+  for (const u of list) {
+    const key = u.code + "\u0000" + u.text, g = groups.get(key);
+    if (g) { g.count += 1; if (u.resolvable_by) g.by.add(u.resolvable_by); }
+    else groups.set(key, { code: u.code, text: u.text, count: 1, by: new Set(u.resolvable_by ? [u.resolvable_by] : []) });
+  }
+  return [...groups.values()];
+}
+function reasonItem(g) {
+  const by = [...g.by].map(byLabel).join(", ");
+  return h("li", null, g.text, h("span", { class: "rmeta" }, h("code", null, g.code),
+    " · " + g.count + (g.count === 1 ? " requirement part" : " requirement parts") + (by ? " · resolvable by: " + by : "")));
+}
+function unknownBox(v) {
+  if (!v.unknown_reasons.length) return h("ul", { class: "why", "aria-label": "Why this appears" }, v.why.map((w) => h("li", null, w)));
+  const g = reasonGroups(v.unknown_reasons), shown = g.slice(0, 3), rest = g.slice(3);
+  return h("div", { class: "unk-box" }, h("h4", null, "Why this can’t be decided"),
+    h("ul", { class: "reasons" }, shown.map(reasonItem)),
+    rest.length ? h("details", null, h("summary", null, rest.length + " more " + (rest.length === 1 ? "reason" : "reasons")),
+      h("ul", { class: "reasons" }, rest.map(reasonItem))) : null);
+}
+
+async function submit(ev) {
+  ev.preventDefault();
+  const req = readForm();
+  if (!req) return;
+  const go = $("go"); go.disabled = true; go.textContent = "Checking rules…";
+  showState(h("div", { class: "state" }, h("span", { class: "spinner", "aria-hidden": "true" }), "Checking each qualification’s entry rules…"));
+  try {
+    lastReq = req;
+    lastData = await api("/demo/explore", req);
+    renderResults(lastData);
+  } catch (e) {
+    showError(e);
+  } finally { go.disabled = false; go.textContent = "Show my options"; }
+}
+
+/* ---------- views ---------- */
+let howCollapsed = false;
+function showState(node, focus) {
+  if (!howCollapsed && node.querySelector && node.querySelector("article.card, .state.error")) {
+    $("how").open = false; howCollapsed = true; // first results: tuck the explainer away; it stays one click away
+  }
+  $("out").replaceChildren(node);
+  if (focus) $("out").focus({ preventScroll: false });
+}
+function showError(e) {
+  const title = e.kind === "network" ? "Server not reachable" : e.kind === "unavailable" ? "Data not available" : "We could not run this check";
+  showState(h("div", { class: "state error", role: "alert" }, h("h2", null, title), h("p", null, e.message),
+    h("p", null, e.kind === "network" ? "Start the server with the command in the README, then try again."
+      : e.kind === "unavailable" ? "The curated data build is missing or not validated, so nothing is shown rather than guessing."
+      : "Check your answers and try again.")), true);
+}
+
+function card(v) {
+  const f = v.facts;
+  return h("article", { class: "card v-" + v.verdict, "aria-labelledby": "t-" + v.code.replace("/", "-") },
+    h("div", { class: "card-top" },
+      h("div", null, h("div", { class: "rank" }, "Option " + v.rank),
+        h("h3", { id: "t-" + v.code.replace("/", "-") }, v.title),
+        h("div", { class: "code" }, v.code + " · NSQF level " + v.nsqf_level)),
+      badge(v.verdict)),
+    h("p", { class: "headline" }, v.headline),
+    v.verdict === "UNKNOWN" ? unknownBox(v) : h("ul", { class: "why", "aria-label": "Why this appears" }, v.why.map((w) => h("li", null, w))),
+    h("div", { class: "facts" },
+      h("span", null, "Official training hours: ", h("b", null, hrs(v.official_total_hours))),
+      h("span", null, "Minimum age: ", h("b", null, f.min_age ?? "n/a")),
+      h("span", { class: "nv" }, "Enrolment: not verified"),
+      h("span", { class: "nv" }, "Application deadline: not verified")),
+    h("button", { class: "btn small", type: "button", onclick: () => renderDetail(v) }, "See evidence and requirements"));
+}
+
+function miniRow(v) {
+  return h("div", { class: "mini" },
+    h("span", null, h("strong", null, v.title), " ", h("span", { class: "code" }, v.code + " · " + hrs(v.official_total_hours))),
+    h("span", null, badge(v.verdict), " ", h("button", { class: "btn ghost small", type: "button", onclick: () => renderDetail(v) }, "Details")));
+}
+
+function renderResults(d) {
+  const out = h("div", null);
+  out.append(h("div", { class: "results-head" },
+    h("h2", { tabindex: "-1", id: "res-h" }, d.cards.length ? "Your options" : "No option is open from these answers"),
+    h("p", { class: "order-note" }, d.ordering.rule)));
+  if (!lastReq || lastReq.age_years === undefined) {
+    out.append(h("div", { class: "callout", role: "note" }, h("strong", null, "Age not stated. "),
+      "The minimum-age rule is undecided for every option, so none can be shown as met. Add an age on the left to check it."));
+  }
+  out.append(h("ul", { class: "legend", "aria-label": "What the labels mean" },
+    [["MET", "every part of at least one documented route, and the minimum age, is satisfied by your answers"],
+     ["CONDITIONAL", "satisfied only if a stated condition (usually your own declaration) holds"],
+     ["UNKNOWN", "the rules or your answers do not allow a decision; nothing is assumed"],
+     ["NOT_MET", "a required part is not satisfied"]]
+      .map(([k, t]) => h("li", null, badge(k), " ", t))));
+  if (!d.cards.length) {
+    out.append(h("div", { class: "state" }, h("h2", null, "Nothing to rank"),
+      h("p", null, "Each pilot qualification has at least one documented entry rule that these answers do not meet. The reasons are listed below; changing an answer may change the result.")));
+  }
+  d.cards.forEach((v) => out.append(card(v)));
+  if (d.more_options.length) {
+    out.append(h("h3", { class: "section-title" }, "Other options considered"),
+      h("div", { class: "collapsible" }, d.more_options.map(miniRow)));
+  }
+  if (d.not_open.length) {
+    out.append(h("h3", { class: "section-title" }, "Not open from your answers"),
+      h("div", { class: "collapsible" }, d.not_open.map((v) => h("div", null, miniRow(v),
+        h("ul", { class: "why" }, v.why.map((w) => h("li", null, w)))))));
+  }
+  out.append(h("details", { class: "collapsible" }, h("summary", null, "How we read your answers"),
+    h("dl", { class: "reading" }, d.reading.map((r) => [h("dt", null, r.label),
+      h("dd", null, r.value, h("small", null, r.how))]))));
+  showState(out);
+  $("res-h").focus({ preventScroll: true });
+  if (window.matchMedia("(max-width: 900px)").matches) $("out").scrollIntoView({ behavior: "auto", block: "start" });
+}
+
+function componentView(c, ev) {
+  const sources = c.evidence_ids.map((id) => ev[id]).filter(Boolean);
+  return h("div", { class: "comp" },
+    h("div", { class: "rq" }, h("span", null, c.requirement_text), badge(c.verdict)),
+    c.condition ? h("div", { class: "sm" }, "Condition: " + c.condition.text) : null,
+    c.unknown_reason ? h("div", { class: "why-unk" }, c.unknown_reason.text +
+      (c.unknown_reason.resolvable_by ? " (resolvable by: " + c.unknown_reason.resolvable_by.replaceAll("_", " ").toLowerCase() + ")" : "")) : null,
+    c.inputs_used.length ? h("div", { class: "sm" }, "Your answer used: ",
+      c.inputs_used.map((i) => [h("code", null, i.field.replace("profile.", "") + " = " + JSON.stringify(i.value)), " ", clsBadge(i.evidence_class), " "])) : null,
+    sources.map((s) => h("div", { class: "sm" }, "Source: ", clsBadge(s.evidence_class), " ",
+      [s.source_title, s.page ? "page " + s.page : null, s.location].filter(Boolean).join(" · ") || (s.note || "Derived from the rule structure"),
+      s.value_status ? " (" + s.value_status.replaceAll("_", " ").toLowerCase() + ")" : "")));
+}
+
+function renderDetail(v) {
+  const r = v.eligibility, f = v.facts, ev = v.evidence, decisive = new Set(r.decisive_rule_ids);
+  const out = h("div", null);
+  out.append(h("button", { class: "btn ghost small back", type: "button", onclick: () => renderResults(lastData) }, "← Back to options"));
+  out.append(h("div", { class: "panel detail-head" },
+    h("div", { class: "card-top" }, h("div", null, h("h2", { id: "det-h", tabindex: "-1" }, v.title),
+      h("div", { class: "code" }, v.code + " · NSQF level " + v.nsqf_level + (f.awarding_body ? " · " + f.awarding_body : ""))), badge(v.verdict)),
+    h("p", { class: "headline" }, v.headline),
+    h("div", { class: "callout cav" }, "This describes documented entry rules for a hypothetical profile. It is not a prediction of admission, completion, employment or earnings."),
+    h("div", { class: "callout" }, h("strong", null, "Enrolment: "), v.enrolment.text, h("br"), h("strong", null, "Deadline: "), v.deadline.text)));
+
+  if (v.conditions.length) out.append(h("h3", { class: "section-title" }, "This holds only if…"),
+    h("div", { class: "collapsible" }, h("ul", { class: "why" }, v.conditions.map((c) => h("li", null, c.text)))));
+  if (v.unknown_reasons.length) out.append(h("h3", { class: "section-title" }, "What would resolve this"),
+    h("div", { class: "collapsible" }, h("ul", { class: "reasons" }, reasonGroups(v.unknown_reasons).map(reasonItem)),
+      h("p", { class: "sub" }, "Each reason is listed once with the number of requirement parts it affects; the rows below show every part.")));
+
+  out.append(h("h3", { class: "section-title" }, "Entry requirements, checked against your answers"),
+    h("p", { class: "sub" }, "Each row is one documented route into the qualification; a row needs all of its parts. The result is the best of the rows, combined with the minimum-age rule."));
+  out.append(h("div", { class: "rowbox" }, h("header", null, h("span", { class: "t" }, "Minimum age"), badge(r.age.verdict)), componentView(r.age, ev)));
+  const rowView = (row) => h("div", { class: "rowbox" + (decisive.has(row.rule_id) ? " decisive" : "") },
+    h("header", null, h("span", { class: "t" }, "Row " + row.s_no + ": " + row.raw_text.replace(" || ", " · ")), badge(row.verdict)),
+    row.components.map((c) => componentView(c, ev)),
+    row.flags.length ? h("div", { class: "comp" }, row.flags.map((fl) => h("div", { class: "sm" }, "Data note: " + fl.message))) : null);
+  const deciding = r.rows.filter((row) => decisive.has(row.rule_id)), others = r.rows.filter((row) => !decisive.has(row.rule_id));
+  if (deciding.length) out.append(h("p", { class: "sub" }, "Rows that decide the result (" + deciding.length + "):"), ...deciding.map(rowView));
+  else out.append(h("p", { class: "sub" }, "No single row decides this result; the minimum-age rule above is the limiting part."));
+  if (others.length) out.append(h("details", { class: "collapsible" }, h("summary", null, "Other documented routes (" + others.length + ") - not deciding this result"), others.map(rowView)));
+
+  out.append(h("h3", { class: "section-title" }, "Training required (official notional hours)"));
+  const hh = f.hours;
+  out.append(h("div", { class: "collapsible" }, h("table", { class: "t" },
+    h("thead", null, h("tr", null, h("th", null, "Component"), h("th", { class: "n" }, "Hours"))),
+    h("tbody", null, [["Theory", hh.theory], ["Practical", hh.practical], ["On-the-job (mandatory)", hh.ojt_mandatory], ["On-the-job (recommended)", hh.ojt_recommended]]
+      .map(([k, x]) => h("tr", null, h("td", null, k), h("td", { class: "n" }, hrs(x)))),
+      h("tr", null, h("td", null, h("strong", null, "Total")), h("td", { class: "n" }, h("strong", null, hrs(hh.total)))))),
+    h("p", { class: "sub", style: "margin-top:8px" }, "Official figures for the full qualification. No reduction for what you already know is claimed.")));
+
+  if (f.skill_units.length) {
+    out.append(h("h3", { class: "section-title" }, "What you would learn (national occupational standards)"),
+      h("div", { class: "collapsible" }, h("table", { class: "t" },
+        h("thead", null, h("tr", null, h("th", null, "Unit"), h("th", null, "Type"), h("th", { class: "n" }, "Hours"))),
+        h("tbody", null, f.skill_units.map((u) => h("tr", null,
+          h("td", null, u.is_bridge ? "Bridge module" : (u.title || "Unit") + (u.code ? " (" + u.code + ")" : "")),
+          h("td", null, u.core_or_noncore.replaceAll("_", " ").toLowerCase()), h("td", { class: "n" }, hrs(u.hours_total))))))));
+  }
+
+  if (v.routes.length) {
+    out.append(h("h3", { class: "section-title" }, "Routes that end here"),
+      h("div", { class: "collapsible" }, v.routes.map((rt) => h("div", { class: "route" },
+        rt.steps.map((s, i) => [i ? h("span", { class: "arrow" }, "→") : null, h("strong", null, s.title), " ", h("span", { class: "code" }, "(" + hrs(s.hours) + ")")]),
+        " ", badge(rt.verdict), h("span", { class: "code" }, " total official hours " + hrs(rt.total_hours))))),
+      h("p", { class: "sub" }, "A later step that depends on an earlier one for its level stays undecided until the relevance is declared (provisional rule). A route is a reading of entry rules, not a prediction."));
+  }
+
+  if (f.progression_claims.length) {
+    out.append(h("h3", { class: "section-title" }, "What the qualification file says about progression"),
+      h("div", { class: "collapsible" }, h("ul", { class: "why" }, f.progression_claims.map((c) => h("li", null, c.text_verbatim))),
+        h("p", { class: "sub" }, "Supporting evidence only; it does not change the result.")));
+  }
+  if (f.quality_flags.length) {
+    out.append(h("h3", { class: "section-title" }, "Data quality notes"),
+      h("div", { class: "collapsible" }, h("ul", { class: "why" }, f.quality_flags.map((q) => h("li", null, q.message)))));
+  }
+  showState(out);
+  $("det-h").focus();
+}
+
+/* ---------- boot ---------- */
+$("form").addEventListener("submit", submit);
+document.querySelectorAll("[data-sample]").forEach((b) => b.addEventListener("click", () => loadSample(b.dataset.sample)));
+loadStatus().then((s) => { if (s && !s.serving) showError({ kind: "unavailable", message: s.reason || "No validated data build." }); });
+loadChoices();
+fillSample("helper"); // default example: a hypothetical sewing helper (not submitted until the user presses the button)
+if (window.matchMedia("(max-width: 760px)").matches) $("how").open = false; // keep the form first on small screens
+</script>
+</body>
+</html>

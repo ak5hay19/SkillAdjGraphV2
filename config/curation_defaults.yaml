@@ -1,0 +1,83 @@
+# Curation configuration for the build (TASKS P1.4). Committed; hashed into data_build_id.
+#
+# Corrections to curated data go through this file or the audit overlay, never through code constants.
+# Nothing here approves an overlay (that is config/overlay_approvals.yaml, Q-2) and nothing here raises an
+# engine_use that an overlay row states: an overlay row always wins, and a cell with neither a row nor an entry
+# below is UNKNOWN (conservative).
+
+# engine_use for a source cell that no overlay row targets. Each entry cites the document that states it; the
+# existence of an official source alone never makes a field safe. A cell is identified by CSV file and column.
+engine_use_defaults:
+  - {file: qualifications.csv, field: hours_theory, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5 (item 13 hours safe); ARCHITECTURE §12"}
+  - {file: qualifications.csv, field: hours_practical, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5; ARCHITECTURE §12"}
+  - {file: qualifications.csv, field: hours_ojt_mandatory, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5; ARCHITECTURE §12"}
+  - {file: qualifications.csv, field: hours_ojt_recommended, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5; ARCHITECTURE §12"}
+  - {file: qualifications.csv, field: hours_total, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5; ARCHITECTURE §12"}
+  - {file: qualifications.csv, field: credits, engine_use: NOT_USED, basis: "AUDIT_NOTE §5 and D1 (all credits)"}
+  - {file: qualifications.csv, field: nco_2015_code, engine_use: DISPLAY_ONLY, basis: "ARCHITECTURE §10.3 (ALIGNED_TO_NCO is not a feasibility edge)"}
+  - {file: qf_nos.csv, field: theory, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5 (per-NOS hours)"}
+  - {file: qf_nos.csv, field: practical, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5"}
+  - {file: qf_nos.csv, field: ojt_mandatory, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5"}
+  - {file: qf_nos.csv, field: ojt_recommended, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5"}
+  - {file: qf_nos.csv, field: total_hours, engine_use: SAFE_HOURS, basis: "AUDIT_NOTE §5"}
+  - {file: qf_nos.csv, field: credits, engine_use: NOT_USED, basis: "AUDIT_NOTE §5 and D1"}
+  - {file: qf_nos.csv, field: nsqf_level, engine_use: DISPLAY_ONLY, basis: "AUDIT_NOTE §5 (NOS levels display only)"}
+  - {file: qf_nos.csv, field: nos_version, engine_use: DISPLAY_ONLY, basis: "AUDIT_NOTE §5 (NOS versions display only)"}
+  - {file: qp_nos_headers.csv, field: credits, engine_use: NOT_USED, basis: "AUDIT_NOTE §5 and D1"}
+  - {file: qp_nos_headers.csv, field: nsqf_level, engine_use: DISPLAY_ONLY, basis: "AUDIT_NOTE §5"}
+  - {file: facts.csv, field: value, only_for: [item5_version], engine_use: DISPLAY_ONLY, basis: "AUDIT_NOTE §5 (item5_version display only)"}
+  - {file: facts.csv, field: value, only_for: [nos_table_total_credits, item10_credits], engine_use: NOT_USED, basis: "AUDIT_NOTE §5 and D1"}
+  - {file: progression_claims.csv, field: claim_text_verbatim, engine_use: DISPLAY_ONLY, basis: "AUDIT_NOTE D2; ARCHITECTURE §10.3"}
+  - {file: approved_qualifications_parsed.csv, field: nsqf_level, engine_use: DISPLAY_ONLY, basis: "ARCHITECTURE §10.2 (catalogue orientation only)"}
+  - {file: approved_qualifications_parsed.csv, field: notional_hours, engine_use: DISPLAY_ONLY, basis: "ARCHITECTURE §10.2"}
+  - {file: approved_qualifications_parsed.csv, field: credits, engine_use: NOT_USED, basis: "AUDIT_NOTE §5 and D1"}
+
+# The qualification-level NSQF level (qualifications.csv) has no entry on purpose: no document states its
+# engine_use outside an eligibility row, so it is UNKNOWN until one does.
+
+# Source conflicts. One entry per conflict; the id is conflict:<lowest overlay id>. Values are read from the
+# extraction cells that the listed overlay rows target (never from overlay free text) and compared with the
+# overlay's recorded source_value. No value is selected.
+conflict_groups:
+  - id: OV-036            # DQ-01, part 1: N2302 credits, QF 3 vs QP 5
+    overlays: [OV-036, OV-037]
+    subject: {entity_id: "nos:AMH/N2302", field: "credits (membership in qual:AMH/Q2301)"}
+    decision_ref: D1
+    engine_effect: NOT_USED
+    values: [{overlay: OV-036}, {overlay: OV-037}]
+    attach: ["membership_credits:AMH/Q2301:AMH/N2302"]
+  - id: OV-038            # DQ-01, part 2: total credits, rows sum vs QF totals / item 10
+    overlays: [OV-038, OV-039]
+    subject: {entity_id: "qual:AMH/Q2301", field: credits}
+    decision_ref: D1
+    engine_effect: NOT_USED
+    values: [{overlay: OV-038}, {overlay: OV-039}, {derived: sum_qf_nos_credits, qualification: AMH/Q2301}]
+    attach: ["qualification_credits:AMH/Q2301"]
+  - id: OV-040            # DQ-02: DGT/VSQ/N0102 level in SSMO, QF 3.5 vs QP 4
+    overlays: [OV-040]
+    subject: {entity_id: "nos:DGT/VSQ/N0102", field: "nsqf_level (membership in qual:AMH/Q2301)"}
+    decision_ref: A1
+    engine_effect: DISPLAY_ONLY
+    values: [{overlay: OV-040}, {qp_row: {qualification: AMH/Q2301, nos_code: DGT/VSQ/N0102, field: nsqf_level}}]
+    attach: ["membership_level:AMH/Q2301:DGT/VSQ/N0102"]
+
+# Open leads: no local conflicting value exists, so they are not conflicts and receive no conflict id (DQ-03).
+# The build fails if the named source becomes available, because the lead would then need a decision.
+open_leads:
+  - id: DQ-03
+    status: UNRESOLVED_LEAD_SOURCE_UNAVAILABLE
+    qualification: AMH/Q2301
+    subject: "SSMO bridge/N2301 hours (QF 3 h + 147 h; a prior lead says the NQR record states 150 h)"
+    source_item: C3
+    reference: "ARCHITECTURE §8.6 DQ-03; reconciliation lead_specialized_n2301_150h_conflict: NOT PERFORMED"
+
+# Title variants kept as aliases (DQ-05). The title must occur in the cited VALIDATION.json snippet.
+title_aliases:
+  - {qualification: AMH/Q0103, kind: qp, title: "Checker - Inline & Measurement", source_item: B1,
+     validation_item: B1, location: "QP cover text (VALIDATION.json items.B1.snippets; ACQUISITION_REPORT §7)"}
+
+# Expected pilot set; the build fails if the data disagrees.
+pilot_qualifications: [AMH/Q0103, AMH/Q0301, AMH/Q2101, AMH/Q2301]
+expected_catalogue_only: 33
+catalogue_source_item: A1   # AMHSSC Approved Qualifications page (HTML), the source of approved_qualifications_parsed.csv
+expected_overlay_rows: 52   # OV-001..OV-052 (AUDIT_NOTE); the build also requires the ids to be contiguous
